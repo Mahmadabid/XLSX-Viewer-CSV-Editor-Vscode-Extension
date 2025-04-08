@@ -21,51 +21,61 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         try {
             const workbook = new Excel.Workbook();
             await workbook.xlsx.readFile(document.uri.fsPath);
-            const worksheet = workbook.worksheets[0];
             
-            // Get the actual row and column counts
-            const rowCount = worksheet.rowCount;
-            const columnCount = worksheet.columnCount;
+            // Create sheet selector options HTML (not the full select element)
+            let sheetOptionsHtml = '';
+            workbook.worksheets.forEach((sheet, index) => {
+                sheetOptionsHtml += `<option value="${index}">${sheet.name}</option>`;
+            });
 
-            let tableHtml = '<table id="xlsx-table" border="1" cellspacing="0" cellpadding="5">';
+            // Function to generate table HTML for a worksheet
+            const generateTableHtml = (worksheet: Excel.Worksheet) => {
+                const rowCount = worksheet.rowCount;
+                const columnCount = worksheet.columnCount;
 
-            // Iterate through all rows, including empty ones
-            for (let rowNumber = 1; rowNumber <= rowCount; rowNumber++) {
-                tableHtml += '<tr>';
-                const row = worksheet.getRow(rowNumber);
-                
-                // Iterate through all columns
-                for (let colNumber = 1; colNumber <= columnCount; colNumber++) {
-                    let cellValue = '&nbsp;';
-                    let style = '';
-                    let isDefaultBlack = false;
-                    let hasCustomBackground = false;
+                let tableHtml = '<table id="xlsx-table" border="1" cellspacing="0" cellpadding="5">';
 
-                    const cell = row.getCell(colNumber);
+                // Iterate through all rows, including empty ones
+                for (let rowNumber = 1; rowNumber <= rowCount; rowNumber++) {
+                    tableHtml += '<tr>';
+                    const row = worksheet.getRow(rowNumber);
                     
-                    // Check for background color first, even in empty cells
-                    if (cell && cell.fill && (cell.fill as any).fgColor && (cell.fill as any).fgColor.argb) {
-                        style += `background-color:${convertARGBToRGBA((cell.fill as any).fgColor.argb)};`;
-                        hasCustomBackground = true;
-                    }
+                    // Iterate through all columns
+                    for (let colNumber = 1; colNumber <= columnCount; colNumber++) {
+                        let cellValue = '&nbsp;';
+                        let style = '';
+                        let isDefaultBlack = false;
+                        let hasCustomBackground = false;
 
-                    if (cell && cell.value !== null && cell.value !== undefined) {
-                        cellValue = cell.value.toString();
+                        const cell = row.getCell(colNumber);
                         
-                        // Font styles
-                        if (cell.font) {
-                            style += cell.font.bold ? 'font-weight:bold;' : '';
-                            style += cell.font.italic ? 'font-style:italic;' : '';
-                            style += cell.font.strike ? 'text-decoration:line-through;' : '';
-                            if (cell.font.size) {
-                                style += `font-size:${cell.font.size+2}px;`;
-                            }
-                            if (cell.font.name) {
-                                style += `font-family:${cell.font.name};`;
-                            }
+                        // Check for background color first, even in empty cells
+                        if (cell && cell.fill && (cell.fill as any).fgColor && (cell.fill as any).fgColor.argb) {
+                            style += `background-color:${convertARGBToRGBA((cell.fill as any).fgColor.argb)};`;
+                            hasCustomBackground = true;
+                        }
 
-                            if (cell.font.color && typeof cell.font.color.argb === "string") {
-                                style += `color: ${convertARGBToRGBA(cell.font.color.argb)};`;
+                        if (cell && cell.value !== null && cell.value !== undefined) {
+                            cellValue = cell.value.toString();
+                            
+                            // Font styles
+                            if (cell.font) {
+                                style += cell.font.bold ? 'font-weight:bold;' : '';
+                                style += cell.font.italic ? 'font-style:italic;' : '';
+                                style += cell.font.strike ? 'text-decoration:line-through;' : '';
+                                if (cell.font.size) {
+                                    style += `font-size:${cell.font.size+2}px;`;
+                                }
+                                if (cell.font.name) {
+                                    style += `font-family:${cell.font.name};`;
+                                }
+
+                                if (cell.font.color && typeof cell.font.color.argb === "string") {
+                                    style += `color: ${convertARGBToRGBA(cell.font.color.argb)};`;
+                                } else {
+                                    style += `color: rgb(0, 0, 0);`;  // Default black
+                                    isDefaultBlack = true;  // Mark for toggling
+                                }
                             } else {
                                 style += `color: rgb(0, 0, 0);`;  // Default black
                                 isDefaultBlack = true;  // Mark for toggling
@@ -74,39 +84,45 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             style += `color: rgb(0, 0, 0);`;  // Default black
                             isDefaultBlack = true;  // Mark for toggling
                         }
-                    } else {
-                        style += `color: rgb(0, 0, 0);`;  // Default black
-                        isDefaultBlack = true;  // Mark for toggling
-                    }
 
-                    // Add data attributes for default colors
-                    const dataAttrs = [];
-                    if (isDefaultBlack) {
-                        dataAttrs.push('data-default-color="true"');
-                    }
-                    if (!hasCustomBackground) {
-                        dataAttrs.push('data-default-bg="true"');
-                    }
-                    // Add empty cell attribute if cell has no content and no custom background
-                    if (!cell || (!cell.value && !hasCustomBackground)) {
-                        dataAttrs.push('data-empty="true"');
-                    }
-                    const dataAttrStr = dataAttrs.join(' ');
+                        // Add data attributes for default colors
+                        const dataAttrs = [];
+                        if (isDefaultBlack) {
+                            dataAttrs.push('data-default-color="true"');
+                        }
+                        if (!hasCustomBackground) {
+                            dataAttrs.push('data-default-bg="true"');
+                        }
+                        // Add empty cell attribute if cell has no content and no custom background
+                        if (!cell || (!cell.value && !hasCustomBackground)) {
+                            dataAttrs.push('data-empty="true"');
+                        }
+                        const dataAttrStr = dataAttrs.join(' ');
 
-                    tableHtml += `<td ${dataAttrStr} style="${style}">${cellValue}</td>`;
+                        tableHtml += `<td ${dataAttrStr} style="${style}">${cellValue}</td>`;
+                    }
+                    tableHtml += '</tr>';
                 }
-                tableHtml += '</tr>';
-            }
-            tableHtml += '</table>';
+                tableHtml += '</table>';
+                return tableHtml;
+            };
+
+            // Store the workbook in the webview state
+            const workbookState = {
+                worksheets: workbook.worksheets.map(ws => ({
+                    name: ws.name,
+                    tableHtml: generateTableHtml(ws)
+                }))
+            };
 
             webviewPanel.webview.options = { enableScripts: true };
-            webviewPanel.webview.html = this.getWebviewContent(tableHtml);
+            webviewPanel.webview.html = this.getWebviewContent(sheetOptionsHtml, workbookState);
         } catch (error) {
             vscode.window.showErrorMessage(`Error reading XLSX file: ${error}`);
         }
     }
 
-    private getWebviewContent(content: string): string {
+    private getWebviewContent(sheetOptionsHtml: string, workbookState: any): string {
         return `
         <!DOCTYPE html>
         <html lang="en">
@@ -180,10 +196,21 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     height: 16px;
                     stroke: white;
                 }
+                .sheet-selector {
+                    padding: 8px 16px;
+                    font-size: 14px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    background-color: white;
+                    cursor: pointer;
+                }
             </style>
         </head>
         <body>
             <div class="button-container">
+                <select id="sheetSelector" class="sheet-selector">
+                    ${sheetOptionsHtml}
+                </select>
                 <button id="toggleButton" class="toggle-button">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/>
@@ -202,13 +229,28 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 </button>
             </div>
             <div class="table-container">
-                ${content}
+                <div id="table-content"></div>
             </div>
             <script>
+                const workbookState = ${JSON.stringify(workbookState)};
+                const sheetSelector = document.getElementById('sheetSelector');
                 const toggleButton = document.getElementById('toggleButton');
                 const toggleBordersButton = document.getElementById('toggleBordersButton');
                 const body = document.body;
-                const table = document.getElementById('xlsx-table');
+                const tableContent = document.getElementById('table-content');
+
+                // Function to update the table content
+                const updateTable = (sheetIndex) => {
+                    tableContent.innerHTML = workbookState.worksheets[sheetIndex].tableHtml;
+                };
+
+                // Initial table load
+                updateTable(0);
+
+                // Sheet selection handler
+                sheetSelector.addEventListener('change', (e) => {
+                    updateTable(parseInt(e.target.value));
+                });
 
                 toggleButton.addEventListener('click', () => {
                     body.classList.toggle('alt-bg');
@@ -235,6 +277,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 });
 
                 toggleBordersButton.addEventListener('click', () => {
+                    const table = document.getElementById('xlsx-table');
                     table.classList.toggle('fade-empty-borders');
                 });
             </script>

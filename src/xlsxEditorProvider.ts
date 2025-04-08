@@ -56,8 +56,12 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                         if (cell.font) {
                             style += cell.font.bold ? 'font-weight:bold;' : '';
                             style += cell.font.italic ? 'font-style:italic;' : '';
+                            style += cell.font.strike ? 'text-decoration:line-through;' : '';
                             if (cell.font.size) {
-                                style += `font-size:${cell.font.size}px;`;
+                                style += `font-size:${cell.font.size+2}px;`;
+                            }
+                            if (cell.font.name) {
+                                style += `font-family:${cell.font.name};`;
                             }
 
                             if (cell.font.color && typeof cell.font.color.argb === "string") {

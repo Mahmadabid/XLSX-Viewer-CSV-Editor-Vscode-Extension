@@ -1,8 +1,8 @@
 {
   "name": "xlsx-viewer",
   "displayName": "XLSX Viewer",
-  "description": "View styles, fonts, and color in XLSX files directly within VS Code. This extension automatically applies formatting, including cell colors, text styles, and fonts, for an accurate spreadsheet preview without needing Excel. Perfect for developers and analysts who work with styled spreadsheets. A lightweight VS Code extension to view XLSX files with preserved styles, fonts, and colors, edit CSV files, and toggle dark mode for better readability.",
-  "version": "1.0.6",
+  "description": "View XLSX files in VS Code",
+  "version": "0.0.1",
   "publisher": "muhammad-ahmad",
   "engines": {
     "vscode": "^1.60.0"
@@ -12,9 +12,9 @@
     "url": "https://github.com/Mahmadabid/XLSX-Viewer-CSV-Editor-Vscode-Extension"
   },
   "categories": [
-    "Other",
-    "Programming Languages"
+    "Other"
   ],
+  "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
     "customEditors": [
@@ -44,17 +44,22 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.98.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
-    "@typescript-eslint/eslint-plugin": "^8.28.0",
-    "@typescript-eslint/parser": "^8.28.0",
-    "eslint": "^9.23.0",
+    "@types/vscode": "^1.60.0",
+    "@types/glob": "^7.1.3",
+    "@types/mocha": "^8.2.2",
+    "@types/node": "14.x",
+    "eslint": "^7.27.0",
+    "@typescript-eslint/eslint-plugin": "^4.26.0",
+    "@typescript-eslint/parser": "^4.26.0",
+    "glob": "^7.1.7",
+    "mocha": "^8.4.0",
+    "typescript": "^4.3.2",
+    "vscode-test": "^1.5.2",
     "esbuild": "^0.25.1",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^5.8.2",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
+    "npm-run-all": "^4.1.5"
+  },
+  "dependencies": {
+    "exceljs": "^4.3.0"
   },
   "license": "MIT",
   "icon": "icon.png"

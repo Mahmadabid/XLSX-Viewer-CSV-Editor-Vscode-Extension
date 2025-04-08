@@ -111,9 +111,29 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>XLSX Viewer</title>
             <style>
-                body { font-family: sans-serif; padding: 10px; background-color: rgb(255, 255, 255); }
-                table { border-collapse: collapse; width: 100%; }
-                th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+                body { 
+                    font-family: sans-serif; 
+                    padding: 10px; 
+                    background-color: rgb(255, 255, 255);
+                    margin: 0;
+                    overflow-x: auto;
+                }
+                .table-container {
+                    width: 100%;
+                    overflow-x: auto;
+                }
+                table { 
+                    border-collapse: collapse; 
+                    width: auto;
+                    min-width: 100%;
+                    table-layout: fixed;
+                }
+                th, td { 
+                    border: 1px solid #ccc; 
+                    padding: 8px; 
+                    text-align: left;
+                    white-space: nowrap;
+                }
                 /* Default background */
                 td { background-color: rgb(255, 255, 255); }
                 /* Alternate background when toggled */
@@ -126,6 +146,10 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     margin-bottom: 10px;
                     display: flex;
                     gap: 10px;
+                    position: sticky;
+                    top: 0;
+                    background-color: inherit;
+                    z-index: 1;
                 }
                 .toggle-button {
                     padding: 8px 16px;

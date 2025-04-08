@@ -94,6 +94,10 @@ class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     if (!hasCustomBackground) {
                         dataAttrs.push('data-default-bg="true"');
                     }
+                    // Add empty cell attribute if cell has no content and no custom background
+                    if (!cell || (!cell.value && !hasCustomBackground)) {
+                        dataAttrs.push('data-empty="true"');
+                    }
                     const dataAttrStr = dataAttrs.join(' ');
 
                     tableHtml += `<td ${dataAttrStr} style="${style}">${cellValue}</td>`;
@@ -126,21 +130,68 @@ class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 /* Alternate background when toggled */
                 body.alt-bg { background-color: rgb(0, 0, 0); }
                 .alt-bg td[data-default-bg="true"] { background-color: rgb(0, 0, 0); }
-                #toggleButton {
+                /* Empty cell border styles */
+                td[data-empty="true"] { border-color: rgba(204, 204, 204, 1); }
+                .fade-empty-borders td[data-empty="true"] { border-color: rgba(204, 204, 204, 0.3); }
+                .button-container {
                     margin-bottom: 10px;
-                    padding: 5px 10px;
+                    display: flex;
+                    gap: 10px;
+                }
+                .toggle-button {
+                    padding: 8px 16px;
                     font-size: 14px;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    background-color: #2196f3;
+                    color: white;
+                    transition: all 0.2s ease;
+                }
+                .toggle-button:hover {
+                    background-color: #1976d2;
+                }
+                .toggle-button:active {
+                    background-color: #1565c0;
+                }
+                .toggle-button svg {
+                    width: 16px;
+                    height: 16px;
+                    stroke: white;
                 }
             </style>
         </head>
         <body>
-            <button id="toggleButton">Toggle Background Color</button>
+            <div class="button-container">
+                <button id="toggleButton" class="toggle-button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/>
+                    </svg>
+                    Toggle Background
+                </button>
+                <button id="toggleBordersButton" class="toggle-button">
+                    <svg id="borderIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="9" y1="3" x2="9" y2="21"/>
+                        <line x1="15" y1="3" x2="15" y2="21"/>
+                        <line x1="3" y1="9" x2="21" y2="9"/>
+                        <line x1="3" y1="15" x2="21" y2="15"/>
+                    </svg>
+                    Fade Empty Cells
+                </button>
+            </div>
             <div class="table-container">
                 ${content}
             </div>
             <script>
                 const toggleButton = document.getElementById('toggleButton');
+                const toggleBordersButton = document.getElementById('toggleBordersButton');
                 const body = document.body;
+                const table = document.getElementById('xlsx-table');
 
                 toggleButton.addEventListener('click', () => {
                     body.classList.toggle('alt-bg');
@@ -164,6 +215,10 @@ class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             cell.style.color = "rgb(0, 0, 0)";
                         }
                     });
+                });
+
+                toggleBordersButton.addEventListener('click', () => {
+                    table.classList.toggle('fade-empty-borders');
                 });
             </script>
         </body>

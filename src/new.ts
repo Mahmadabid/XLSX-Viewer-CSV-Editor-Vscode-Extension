@@ -2,14 +2,14 @@ import * as vscode from 'vscode';
 import * as Excel from 'exceljs';
 import { convertARGBToRGBA } from './utilities';
 
-// Helper function to check if an RGBA color is black or a dark shade
+// Helper function to check if an RGBA color is black or a shade of black
 const isShadeOfBlack = (rgbaColor: string): boolean => {
     const match = rgbaColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
     if (!match) return false; // Should not happen with convertARGBToRGBA output
     const r = parseInt(match[1], 10);
     const g = parseInt(match[2], 10);
     const b = parseInt(match[3], 10);
-    const threshold = 30; // Define a threshold for what counts as “black or nearly black”
+    const threshold = 30; // Define shade threshold
     return r <= threshold && g <= threshold && b <= threshold;
 };
 
@@ -33,28 +33,26 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
             const workbook = new Excel.Workbook();
             await workbook.xlsx.readFile(document.uri.fsPath);
             
-            // Create sheet selector options HTML (this is just for the dropdown)
+            // Create sheet selector options HTML (not the full select element)
             let sheetOptionsHtml = '';
             workbook.worksheets.forEach((sheet, index) => {
                 sheetOptionsHtml += `<option value="${index}">${sheet.name}</option>`;
             });
 
-            // Helper function to map Excel border styles to CSS styles.
-            // It returns both the CSS style string and a flag to denote if the original border color is black or near-black.
+            // Helper function to map Excel border styles to CSS
+            // Returns the style string and whether the original color was black/shade
             const getBorderStyle = (border?: Partial<Excel.Border>): { styleString: string; isBlackOrShade: boolean } => {
-                const defaultBorderStyle = '1px solid #c4c4c4'; // Fallback border style
+                const defaultBorderStyle = '1px solid #c4c4c4'; // Default light gray border
                 const defaultResult = { styleString: defaultBorderStyle, isBlackOrShade: false };
 
                 if (!border || !border.style) {
-                    return defaultResult;
+                    return defaultResult; // Apply default if style is missing for this edge
                 }
 
-                const originalColor = border.color && border.color.argb
-                    ? convertARGBToRGBA(border.color.argb)
-                    : 'rgba(0, 0, 0, 1)'; // Default to black if color is missing
-
+                const originalColor = border.color && border.color.argb ? convertARGBToRGBA(border.color.argb) : 'rgba(0, 0, 0, 1)'; // Default to black RGBA
                 const isBlack = isShadeOfBlack(originalColor);
-                const displayColor = originalColor;
+                // Always use the original color for initial display
+                const displayColor = originalColor; 
 
                 let stylePart = '';
                 switch (border.style) {
@@ -64,32 +62,37 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     case 'dotted': stylePart = `1px dotted ${displayColor}`; break;
                     case 'dashed': stylePart = `1px dashed ${displayColor}`; break;
                     case 'double': stylePart = `3px double ${displayColor}`; break;
-                    default: stylePart = `1px solid ${displayColor}`; break;
+                    default: stylePart = `1px solid ${displayColor}`; break; // Fallback
                 }
+                // Return the style string based on original color, and the flag
                 return { styleString: stylePart, isBlackOrShade: isBlack };
             };
 
-            // Generate table HTML for a worksheet.
-            const generateTableHtml = (worksheet: Excel.Worksheet): string => {
+
+            // Function to generate table HTML for a worksheet
+            const generateTableHtml = (worksheet: Excel.Worksheet) => {
                 const rowCount = worksheet.rowCount;
                 const columnCount = worksheet.columnCount;
+
                 let tableHtml = '<table id="xlsx-table" border="1" cellspacing="0" cellpadding="5">';
 
+                // Iterate through all rows, including empty ones
                 for (let rowNumber = 1; rowNumber <= rowCount; rowNumber++) {
                     tableHtml += '<tr>';
                     const row = worksheet.getRow(rowNumber);
-
+                    
+                    // Iterate through all columns
                     for (let colNumber = 1; colNumber <= columnCount; colNumber++) {
                         let cellValue = '&nbsp;';
                         let style = '';
                         let isDefaultBlack = false;
                         let hasCustomBackground = false;
-                        let cellHasBlackBorder = false;
+                        let cellHasBlackBorder = false; // Track if any border was originally black/shade
 
                         const cell = row.getCell(colNumber);
 
-                        // Check for custom background color even in an empty cell
-                        if (cell?.fill && (cell.fill as any).fgColor && (cell.fill as any).fgColor.argb) {
+                        // Check for background color first, even in empty cells
+                        if (cell && cell.fill && (cell.fill as any).fgColor && (cell.fill as any).fgColor.argb) {
                             style += `background-color:${convertARGBToRGBA((cell.fill as any).fgColor.argb)};`;
                             hasCustomBackground = true;
                         }
@@ -97,32 +100,34 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                         if (cell && cell.value !== null && cell.value !== undefined) {
                             cellValue = cell.value.toString();
                             
+                            // Font styles
                             if (cell.font) {
                                 style += cell.font.bold ? 'font-weight:bold;' : '';
                                 style += cell.font.italic ? 'font-style:italic;' : '';
                                 style += cell.font.strike ? 'text-decoration:line-through;' : '';
                                 if (cell.font.size) {
-                                    style += `font-size:${cell.font.size + 2}px;`;
+                                    style += `font-size:${cell.font.size+2}px;`;
                                 }
                                 if (cell.font.name) {
                                     style += `font-family:${cell.font.name};`;
                                 }
+
                                 if (cell.font.color && typeof cell.font.color.argb === "string") {
                                     style += `color: ${convertARGBToRGBA(cell.font.color.argb)};`;
                                 } else {
-                                    style += `color: rgb(0, 0, 0);`;
-                                    isDefaultBlack = true;
+                                    style += `color: rgb(0, 0, 0);`;  // Default black
+                                    isDefaultBlack = true;  // Mark for toggling
                                 }
                             } else {
-                                style += `color: rgb(0, 0, 0);`;
-                                isDefaultBlack = true;
+                                style += `color: rgb(0, 0, 0);`;  // Default black
+                                isDefaultBlack = true;  // Mark for toggling
                             }
                         } else {
-                            style += `color: rgb(0, 0, 0);`;
-                            isDefaultBlack = true;
+                            style += `color: rgb(0, 0, 0);`;  // Default black
+                            isDefaultBlack = true;  // Mark for toggling
                         }
 
-                        // Process the border styles for all four sides.
+                        // Border styles
                         const topBorder = getBorderStyle(cell?.border?.top);
                         const leftBorder = getBorderStyle(cell?.border?.left);
                         const bottomBorder = getBorderStyle(cell?.border?.bottom);
@@ -137,7 +142,8 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             cellHasBlackBorder = true;
                         }
 
-                        // Add data attributes to record the default state
+
+                        // Add data attributes for default colors and borders
                         const dataAttrs = [];
                         if (isDefaultBlack) {
                             dataAttrs.push('data-default-color="true"');
@@ -145,9 +151,10 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                         if (!hasCustomBackground) {
                             dataAttrs.push('data-default-bg="true"');
                         }
-                        if (cellHasBlackBorder) {
+                        if (cellHasBlackBorder) { // Add the new attribute
                             dataAttrs.push('data-black-border="true"');
                         }
+                        // Add empty cell attribute if cell has no content and no custom background
                         if (!cell || (!cell.value && !hasCustomBackground)) {
                             dataAttrs.push('data-empty="true"');
                         }
@@ -161,7 +168,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 return tableHtml;
             };
 
-            // Prepare state for the webview with the worksheets and table HTML.
+            // Store the workbook in the webview state
             const workbookState = {
                 worksheets: workbook.worksheets.map(ws => ({
                     name: ws.name,
@@ -203,16 +210,18 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     table-layout: fixed;
                 }
                 th, td {
-                    border: none; 
+                    /* border: 1px solid #ccc; */ /* Removed default border */
+                    border: none; /* Explicitly set to none initially */
                     padding: 8px;
                     text-align: left;
                     white-space: nowrap;
                 }
-                /* Default cell background */
+                /* Default background */
                 td { background-color: rgb(255, 255, 255); }
-                /* Alternate background used in dark mode */
+                /* Alternate background when toggled */
                 body.alt-bg { background-color: rgb(0, 0, 0); }
                 .alt-bg td[data-default-bg="true"] { background-color: rgb(0, 0, 0); }
+                /* Removed fade-empty-borders styles */
                 .button-container {
                     margin-bottom: 10px;
                     display: flex;
@@ -268,6 +277,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     </svg>
                     Toggle Background
                 </button>
+                <!-- Removed Fade Empty Cells button -->
             </div>
             <div class="table-container">
                 <div id="table-content"></div>
@@ -276,17 +286,19 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 const workbookState = ${JSON.stringify(workbookState)};
                 const sheetSelector = document.getElementById('sheetSelector');
                 const toggleButton = document.getElementById('toggleButton');
+                // Removed toggleBordersButton reference
                 const body = document.body;
                 const tableContent = document.getElementById('table-content');
 
-                // Function to update table content based on selected sheet.
+                // Function to update the table content
                 const updateTable = (sheetIndex) => {
                     tableContent.innerHTML = workbookState.worksheets[sheetIndex].tableHtml;
                 };
 
-                // Load the first sheet initially.
+                // Initial table load
                 updateTable(0);
 
+                // Sheet selection handler
                 sheetSelector.addEventListener('change', (e) => {
                     updateTable(parseInt(e.target.value));
                 });
@@ -295,26 +307,30 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     body.classList.toggle('alt-bg');
                     const isDarkMode = body.classList.contains('alt-bg');
                     const whiteBorderColor = 'rgb(255, 255, 255)'; // White for dark mode borders
-                    const blackBorderColor = 'rgb(0, 0, 0)'; // Black for light mode borders
-                    
-                    // Toggle the default cell background colors.
+                    const blackBorderColor = 'rgb(0, 0, 0)'; // Black for light mode borders (reverting)
+
+                    // Change background color of cells with default background
                     const defaultBgCells = document.querySelectorAll('#xlsx-table td[data-default-bg="true"]');
                     defaultBgCells.forEach(cell => {
                         cell.style.backgroundColor = isDarkMode ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)";
                     });
 
-                    // Toggle the default text color for cells that are both default background and default text color.
+                    // Change text color only for cells with both default background and default text color
                     const defaultBothCells = document.querySelectorAll('#xlsx-table td[data-default-bg="true"][data-default-color="true"]');
                     defaultBothCells.forEach(cell => {
                         cell.style.color = isDarkMode ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)";
                     });
 
-                    // Toggle border colors for cells that originally had black or near-black borders.
+                    // Toggle border colors for cells that originally had black/shade borders
                     const blackBorderCells = document.querySelectorAll('#xlsx-table td[data-black-border="true"]');
                     blackBorderCells.forEach(cell => {
+                        // Set borderColor which applies to all four sides
+                        // In dark mode, change black borders to white. In light mode, change them back to black.
                         cell.style.borderColor = isDarkMode ? whiteBorderColor : blackBorderColor;
                     });
                 });
+
+                // Removed toggleBordersButton event listener
             </script>
         </body>
         </html>

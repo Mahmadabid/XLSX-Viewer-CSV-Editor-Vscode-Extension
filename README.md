@@ -1,24 +1,43 @@
-# XLSX Viewer - VS Code Extension
+# XLSX Viewer & CSV Editor - VS Code Extension
 
 ## 📌 Overview
 
-XLSX Viewer is a powerful **Visual Studio Code** extension that allows users to **open, view, and analyze Excel files (.xlsx) directly within VS Code**. It provides a seamless, lightweight experience without requiring external software like Microsoft Excel or Google Sheets.
+XLSX Viewer & CSV Editor is a powerful **Visual Studio Code** extension that allows users to **open and view Excel files (.xlsx)** and **edit CSV files directly within VS Code**. It provides a seamless, lightweight experience without requiring external software like Microsoft Excel or Google Sheets.
+
+**🚨 Important Note**: This extension was previously named **`XLSX Viewer`**. It has now been renamed to **`XLSX Viewer & CSV Editor`** to reflect the added support for CSV file editing.
 
 ## 🚀 Features
 
-✅ **Fast & Lightweight** - View Excel spreadsheets quickly within VS Code.\
-✅ **Retains Formatting** - Keeps cell styles, colors, and text formatting.\
-✅ **Toggle Background Mode** - Easily switch between dark and light backgrounds.\
-✅ **Interactive Table View** - Display spreadsheet data in a structured HTML table.\
-✅ **Color Detection & Conversion** - Converts ARGB Excel colors into CSS-compatible formats.
+### XLSX Viewing
+✅ **Fast & Lightweight** - View Excel spreadsheets quickly within VS Code\
+✅ **Retains Formatting** - Keeps cell styles, colors, and text formatting\
+✅ **Multiple Sheet Support** - View all sheets in your Excel workbook\
+✅ **Toggle Background Mode** - Easily switch between dark and light backgrounds\
+✅ **Interactive Table View** - Display spreadsheet data in a structured HTML table\
+✅ **Color Detection & Conversion** - Converts ARGB Excel colors into CSS-compatible formats
+
+### CSV Editing
+✅ **Table View** - Edit CSV files in a structured table format\
+✅ **Toggle View** - Switch between table and raw text views\
+✅ **Easy Navigation** - Intuitive interface for viewing and editing CSV data
+
+## 📜 Changelog
+
+### v1.1.0 - XLSX Viewer & CSV Editor (New Name)
+- **New Name**: Previously known as `XLSX Viewer`.
+- **Features**: Added CSV file editing capabilities in a structured table view.
+- **Bug Fixes**: Improved performance and UI enhancements.
+
+### v1.0.0 - XLSX Viewer
+- Initial release with basic functionality for viewing Excel files.
 
 ## 🛠️ Installation
 
-1. Open **VS Code**.
-2. Go to the **Extensions Marketplace** (`Ctrl+Shift+X`).
-3. Search for `XLSX Viewer`.
-4. Click **Install**.
-5. Open any `.xlsx` file to start viewing!
+1. Open **VS Code**
+2. Go to the **Extensions Marketplace** (`Ctrl+Shift+X`)
+3. Search for `XLSX Viewer CSV Editor`
+4. Click **Install**
+5. Open any `.xlsx` or `.csv` file to start viewing or editing!
 
 Alternatively, you can install it manually using:
 
@@ -28,16 +47,24 @@ code --install-extension muhammad-ahmad.xlsx-viewer
 
 ## 📖 Usage
 
-1. Open VS Code.
-2. Drag & drop an **.xlsx file** into the editor.
-3. View and analyze your data in an HTML table format.
-4. Use the **toggle button** to switch the background color.
+### For XLSX Files
+1. Open VS Code
+2. Open an **.xlsx file**
+3. View and analyze your data in an HTML table format
+4. Use the **toggle button** to switch the background color
+5. Navigate between sheets using the sheet selector
+
+### For CSV Files
+1. Open any **.csv file**
+2. Edit data directly in the table view
+3. Use the **Toggle View** button to switch between table and text views
+4. Changes are saved automatically
 
 ## 🔄 Roadmap
 
-🔹 **Cell Editing & Saving** (Upcoming Feature)\
+🔹 **Enhanced CSV Editing Features**\
 🔹 **Sorting & Filtering**\
-🔹 **Export to CSV & JSON**\
+🔹 **Export XLSX to CSV & JSON**\
 🔹 **Dark Mode Support**
 
 ## 🛠️ Contributing
@@ -55,5 +82,5 @@ If you find this extension helpful, please **rate it on the VS Code Marketplace*
 ---
 
 📢 **Follow us for updates!**\
-🔗 GitHub: [XLSX Viewer Github Link](https://github.com/Mahmadabid/XLSX-Viewer-Vscode-Extension)\
-🔗 Marketplace: [VS Code Extension Link](https://marketplace.visualstudio.com/items?itemName=Muhammad-Ahmad.xlsx-viewer)
+🔗 GitHub: [XLSX Viewer & CSV Editor Github Link](https://github.com/Mahmadabid/XLSX-Viewer-CSV-Editor-Vscode-Extension)\
+🔗 Marketplace: [VS Code Extension Link](https://marketplace.visualstudio.com/items?itemName=muhammad-ahmad.xlsx-viewer)

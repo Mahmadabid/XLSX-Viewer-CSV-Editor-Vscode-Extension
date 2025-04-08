@@ -1,8 +1,8 @@
 {
   "name": "xlsx-viewer",
-  "displayName": "XLSX Viewer",
-  "description": "View XLSX files in VS Code",
-  "version": "0.0.1",
+  "displayName": "XLSX Viewer CSV Editor",
+  "description": "View XLSX files with styles, fonts and colors from excel files with multiple sheet support and edit CSV files in VS Code",
+  "version": "1.1.1",
   "publisher": "muhammad-ahmad",
   "engines": {
     "vscode": "^1.60.0"
@@ -11,8 +11,22 @@
     "type": "git",
     "url": "https://github.com/Mahmadabid/XLSX-Viewer-CSV-Editor-Vscode-Extension"
   },
+  "keywords": [
+    "xlsx",
+    "excel",
+    "csv",
+    "spreadsheet",
+    "viewer",
+    "editor",
+    "multiple sheets",
+    "style",
+    "fonts",
+    "theme"
+  ],
   "categories": [
-    "Other"
+    "Other",
+    "Data Science",
+    "Visualization"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
@@ -26,8 +40,34 @@
             "filenamePattern": "*.xlsx"
           }
         ]
+      },
+      {
+        "viewType": "xlsxViewer.csv",
+        "displayName": "CSV Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.csv"
+          }
+        ]
       }
-    ]
+    ],
+    "commands": [
+      {
+        "command": "xlsx-viewer.goBackToTableView",
+        "title": "Open in Table View",
+        "category": "CSV",
+        "icon": "$(table)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourceExtname == '.csv' && activeEditor != 'xlsxViewer.csv'",
+          "command": "xlsx-viewer.goBackToTableView",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

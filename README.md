@@ -44,7 +44,6 @@ Alternatively, you can install it manually using:
 ```
 code --install-extension muhammad-ahmad.xlsx-viewer
 ```
-
 ## 📖 Usage
 
 ### For XLSX Files
@@ -59,13 +58,6 @@ code --install-extension muhammad-ahmad.xlsx-viewer
 2. Edit data directly in the table view
 3. Use the **Toggle View** button to switch between table and text views
 4. Changes are saved automatically
-
-## 🔄 Roadmap
-
-🔹 **Enhanced CSV Editing Features**\
-🔹 **Sorting & Filtering**\
-🔹 **Export XLSX to CSV & JSON**\
-🔹 **Dark Mode Support**
 
 ## 🛠️ Contributing
 

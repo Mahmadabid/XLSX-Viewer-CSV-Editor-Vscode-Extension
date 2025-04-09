@@ -42,7 +42,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     ? convertARGBToRGBA(border.color.argb)
                     : 'rgba(0, 0, 0, 1)'; // Default to black if color is missing
 
-                const isBlack = isShadeOfBlack(originalColor) || (border.color?.argb === 'FF000000');
+                const isBlack = isShadeOfBlack(originalColor)
                 const displayColor = originalColor;
 
                 let stylePart = '';

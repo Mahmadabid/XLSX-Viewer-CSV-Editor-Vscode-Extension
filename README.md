@@ -23,6 +23,10 @@ XLSX Viewer & CSV Editor is a powerful **Visual Studio Code** extension that all
 
 ## 📜 Changelog
 
+### v1.2.0 - Enhanced Toggle Background
+- **Improved Toggle Background**: Updated toggle button functionality for light and dark modes with alternating icons.
+- **UI Enhancements**: Adjusted icon sizes and improved visual consistency.
+
 ### v1.1.0 - XLSX Viewer & CSV Editor (New Name)
 - **New Name**: Previously known as `XLSX Viewer`.
 - **Features**: Added CSV file editing capabilities in a structured table view.
@@ -35,7 +39,7 @@ XLSX Viewer & CSV Editor is a powerful **Visual Studio Code** extension that all
 
 1. Open **VS Code**
 2. Go to the **Extensions Marketplace** (`Ctrl+Shift+X`)
-3. Search for `XLSX Viewer CSV Editor`
+3. Search for `XLSX Viewer & CSV Editor`
 4. Click **Install**
 5. Open any `.xlsx` or `.csv` file to start viewing or editing!
 

@@ -1,9 +1,42 @@
 import * as vscode from 'vscode';
 import * as Excel from 'exceljs';
-import { convertARGBToRGBA, isShadeOfBlack } from './utilities';
+import { convertARGBToRGBA } from './utilities';
+
+// Helper function to check if an RGBA color is black with opacity
+const isBlackWithOpacity = (rgbaColor: string): boolean => {
+    const match = rgbaColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+    if (!match) return false; // Not in rgba format with opacity
+    const r = parseInt(match[1], 10);
+    const g = parseInt(match[2], 10);
+    const b = parseInt(match[3], 10);
+    const a = parseFloat(match[4]);
+    return r === 0 && g === 0 && b === 0 && a >= 0 && a <= 1;
+};
+
+// Helper function to check if an RGB color is black without opacity
+const isBlackWithoutOpacity = (rgbColor: string): boolean => {
+    const match = rgbColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (!match) return false; // Not in rgb format
+    const r = parseInt(match[1], 10);
+    const g = parseInt(match[2], 10);
+    const b = parseInt(match[3], 10);
+    return r === 0 && g === 0 && b === 0;
+};
+
+// Helper function to check if a color is exactly black (with or without opacity)
+const isShadeOfBlack = (color: string): boolean => {
+    return isBlackWithOpacity(color) || isBlackWithoutOpacity(color);
+};
 
 export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
-    constructor(private readonly context: vscode.ExtensionContext) { }
+    private outputChannel: vscode.OutputChannel;
+
+    constructor(private readonly context: vscode.ExtensionContext) {
+        // Create an output channel for logging border colors
+        this.outputChannel = vscode.window.createOutputChannel('XLSX Border Colors');
+        // Optionally show the output channel automatically:
+        this.outputChannel.show(true);
+    }
 
     async openCustomDocument(
         uri: vscode.Uri,
@@ -21,16 +54,15 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         try {
             const workbook = new Excel.Workbook();
             await workbook.xlsx.readFile(document.uri.fsPath);
-            
+
             // Create sheet selector options HTML (this is just for the dropdown)
             let sheetOptionsHtml = '';
             workbook.worksheets.forEach((sheet, index) => {
                 sheetOptionsHtml += `<option value="${index}">${sheet.name}</option>`;
             });
 
-            // Helper function to map Excel border styles to CSS styles.
-            // It returns both the CSS style string and a flag to denote if the original border color is black or near-black.
-            const getBorderStyle = (border?: Partial<Excel.Border>): { styleString: string; isBlackOrShade: boolean } => {
+            // Updated helper function: row and col come first, then the optional border
+            const getBorderStyle = (row: number, col: number, border?: Partial<Excel.Border>): { styleString: string; isBlackOrShade: boolean } => {
                 const defaultBorderStyle = '1px solid #c4c4c4'; // Fallback border style
                 const defaultResult = { styleString: defaultBorderStyle, isBlackOrShade: false };
 
@@ -42,7 +74,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     ? convertARGBToRGBA(border.color.argb)
                     : 'rgba(0, 0, 0, 1)'; // Default to black if color is missing
 
-                const isBlack = isShadeOfBlack(originalColor) || (border.color?.argb === 'FF000000');
+                const isBlack = isShadeOfBlack(originalColor);
                 const displayColor = originalColor;
 
                 let stylePart = '';
@@ -55,6 +87,10 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     case 'double': stylePart = `3px double ${displayColor}`; break;
                     default: stylePart = `1px solid ${displayColor}`; break;
                 }
+
+                // Log border color along with the cell position (row, column)
+                this.outputChannel.appendLine(`Cell [${row}, ${col}] Border color: ${originalColor} (Style: ${border.style})`);
+
                 return { styleString: stylePart, isBlackOrShade: isBlack };
             };
 
@@ -85,7 +121,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
                         if (cell && cell.value !== null && cell.value !== undefined) {
                             cellValue = cell.value.toString();
-                            
+
                             if (cell.font) {
                                 style += cell.font.bold ? 'font-weight:bold;' : '';
                                 style += cell.font.italic ? 'font-style:italic;' : '';
@@ -112,10 +148,10 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                         }
 
                         // Process the border styles for all four sides.
-                        const topBorder = getBorderStyle(cell?.border?.top);
-                        const leftBorder = getBorderStyle(cell?.border?.left);
-                        const bottomBorder = getBorderStyle(cell?.border?.bottom);
-                        const rightBorder = getBorderStyle(cell?.border?.right);
+                        const topBorder = getBorderStyle(rowNumber, colNumber, cell?.border?.top);
+                        const leftBorder = getBorderStyle(rowNumber, colNumber, cell?.border?.left);
+                        const bottomBorder = getBorderStyle(rowNumber, colNumber, cell?.border?.bottom);
+                        const rightBorder = getBorderStyle(rowNumber, colNumber, cell?.border?.right);
 
                         style += `border-top:${topBorder.styleString};`;
                         style += `border-left:${leftBorder.styleString};`;

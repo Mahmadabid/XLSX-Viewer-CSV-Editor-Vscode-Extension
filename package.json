@@ -1,8 +1,8 @@
 {
   "name": "xlsx-viewer",
   "displayName": "XLSX Viewer CSV Editor",
-  "description": "View XLSX files with styles, fonts and colors from excel files with multiple sheet support and edit CSV files in VS Code",
-  "version": "1.1.4",
+  "description": "View XLSX files with styles, fonts and colors from excel files with multiple sheet support and view with table view and edit CSV files in VS Code",
+  "version": "1.2.0",
   "publisher": "muhammad-ahmad",
   "engines": {
     "vscode": "^1.60.0"

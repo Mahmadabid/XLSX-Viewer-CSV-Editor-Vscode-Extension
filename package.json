@@ -28,6 +28,7 @@
     "Data Science",
     "Visualization"
   ],
+  "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
     "customEditors": [

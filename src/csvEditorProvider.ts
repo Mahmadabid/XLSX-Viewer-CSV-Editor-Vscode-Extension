@@ -43,13 +43,13 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
             };
 
             webviewPanel.webview.options = { enableScripts: true };
-            webviewPanel.webview.html = this.getWebviewContent(generateTableHtml());
+            webviewPanel.webview.html = this.getWebviewContent(generateTableHtml(), webviewPanel);
 
             webviewPanel.webview.onDidReceiveMessage(async message => {
                 if (message.command === 'toggleView') {
                     const isTableView = message.isTableView;
                     if (isTableView) {
-                        webviewPanel.webview.html = this.getWebviewContent(generateTableHtml());
+                        webviewPanel.webview.html = this.getWebviewContent(generateTableHtml(), webviewPanel);
                     } else {
                         // Open in default editor
                         await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default');
@@ -65,7 +65,10 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
         }
     }
 
-    private getWebviewContent(tableHtml: string): string {
+    private getWebviewContent(tableHtml: string, webviewPanel: vscode.WebviewPanel): string {
+        const imgUri = webviewPanel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'view.png'));
+        const svgUri = webviewPanel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'table.svg'));
+
         return `
         <!DOCTYPE html>
         <html lang="en">
@@ -107,6 +110,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     z-index: 1;
                 }
                 .toggle-button {
+                    max-height: 42px;
                     padding: 8px 16px;
                     font-size: 14px;
                     font-weight: bold;
@@ -144,19 +148,60 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 }
                 /* Empty cell border styles */
                 td:empty { border-color: rgba(204, 204, 204, 1); }
+
+                .tooltip {
+                    position: relative;
+                    display: inline-block;
+                }
+
+                .tooltip .tooltiptext {
+                    visibility: hidden;
+                    width: 250px;
+                    background-color: rgb(231, 248, 255);
+                    color: rgb(0, 0, 0);
+                    text-align: center;
+                    border-radius: 6px;
+                    padding: 10px;
+                    position: absolute;
+                    z-index: 1;
+                    top: 130%;
+                    left: 50%;
+                    margin-left: -125px;
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                    white-space: normal;
+                    line-height: 1.5;
+                }
+
+                .tooltip:hover .tooltiptext {
+                    visibility: visible;
+                    opacity: 1;
+                }
+
+                .tooltip .tooltiptext span {
+                    color: #ff6600;
+                }
+
+                .tooltip .tooltiptext .warning {
+                    color: red;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+                .tooltip .tooltiptext .instruction {
+                    color:rgb(2, 105, 190);
+                    font-weight: normal;
+                }
+
             </style>
         </head>
         <body>
             <div class="button-container">
                 <button id="toggleViewButton" class="toggle-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="3" y1="9" x2="21" y2="9"></line>
-                        <line x1="3" y1="15" x2="21" y2="15"></line>
-                        <line x1="9" y1="3" x2="9" y2="21"></line>
-                        <line x1="15" y1="3" x2="15" y2="21"></line>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                     </svg>
-                    Toggle View
+                    Edit File
                 </button>
                 <button id="toggleBackgroundButton" class="toggle-button">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -164,6 +209,14 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     </svg>
                     Toggle Background
                 </button>
+                <div class = "tooltip">
+                    <img src="${imgUri}" alt="Change to table view"  style="width: auto; height: 32px; margin-left: auto;" />
+                    <span class="tooltiptext">
+                        <span class="warning">Important:</span> Click the blue table icon <img src="${svgUri}" alt="Table Icon" style="width: 16px; vertical-align: middle; height: 16px;" />
+                         to switch to table view from edit file mode. <br>
+                        <span class = "instruction">The table icon will only work on edit file mode and is located on the top right corner in the editor toolbar as shown in the image.</span>
+                    </span>
+                </div>
             </div>
             <div id="content">${tableHtml}</div>
             <script>

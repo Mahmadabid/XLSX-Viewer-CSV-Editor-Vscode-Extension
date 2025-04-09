@@ -131,8 +131,8 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     background-color: #1565c0;
                 }
                 .toggle-button svg {
-                    width: 16px;
-                    height: 16px;
+                    width: 20px;
+                    height: 20px;
                     stroke: white;
                 }
                 /* Default background */
@@ -204,13 +204,23 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     Edit File
                 </button>
                 <button id="toggleBackgroundButton" class="toggle-button">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/>
+                    <svg id="lightIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1" x2="12" y2="3"/>
+                        <line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1" y1="12" x2="3" y2="12"/>
+                        <line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                     </svg>
-                    Toggle Background
+                    <svg id="darkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
                 </button>
                 <div class = "tooltip">
-                    <img src="${imgUri}" alt="Change to table view"  style="width: auto; height: 32px; margin-left: auto;" />
+                    <img src="${imgUri}" alt="Change to table view"  style="width: auto; height: 32px; margin-left: auto; margin-top: 2px;" />
                     <span class="tooltiptext">
                         <span class="warning">Important:</span> Click the blue table icon <img src="${svgUri}" alt="Table Icon" style="width: 16px; vertical-align: middle; height: 16px;" />
                          to switch to table view from edit file mode. <br>
@@ -230,10 +240,20 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
                 document.getElementById('toggleBackgroundButton').addEventListener('click', () => {
                     document.body.classList.toggle('alt-bg');
+                    const isDarkMode = document.body.classList.contains('alt-bg');
+
+                    // Toggle icons
+                    if (isDarkMode) {
+                        document.getElementById('lightIcon').style.display = 'block';
+                        document.getElementById('darkIcon').style.display = 'none';
+                    } else {
+                        document.getElementById('lightIcon').style.display = 'none';
+                        document.getElementById('darkIcon').style.display = 'block';
+                    }
 
                     const defaultBgCells = document.querySelectorAll('td[data-default-bg="true"]');
                     defaultBgCells.forEach(cell => {
-                        if (document.body.classList.contains('alt-bg')) {
+                        if (isDarkMode) {
                             cell.style.backgroundColor = "rgb(0, 0, 0)";
                         } else {
                             cell.style.backgroundColor = "rgb(255, 255, 255)";
@@ -242,7 +262,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
                     const defaultBothCells = document.querySelectorAll('td[data-default-bg="true"][data-default-color="true"]');
                     defaultBothCells.forEach(cell => {
-                        if (document.body.classList.contains('alt-bg')) {
+                        if (isDarkMode) {
                             cell.style.color = "rgb(255, 255, 255)";
                         } else {
                             cell.style.color = "rgb(0, 0, 0)";

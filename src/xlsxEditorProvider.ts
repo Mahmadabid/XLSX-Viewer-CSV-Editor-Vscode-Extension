@@ -2,15 +2,30 @@ import * as vscode from 'vscode';
 import * as Excel from 'exceljs';
 import { convertARGBToRGBA } from './utilities';
 
-// Helper function to check if an RGBA color is black or a dark shade
-const isShadeOfBlack = (rgbaColor: string): boolean => {
-    const match = rgbaColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
-    if (!match) return false; // Should not happen with convertARGBToRGBA output
+// Helper function to check if an RGBA color is black with opacity
+const isBlackWithOpacity = (rgbaColor: string): boolean => {
+    const match = rgbaColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+    if (!match) return false; // Not in rgba format with opacity
     const r = parseInt(match[1], 10);
     const g = parseInt(match[2], 10);
     const b = parseInt(match[3], 10);
-    const threshold = 30; // Define a threshold for what counts as “black or nearly black”
-    return r <= threshold && g <= threshold && b <= threshold;
+    const a = parseFloat(match[4]);
+    return r === 0 && g === 0 && b === 0 && a >= 0 && a <= 1;
+};
+
+// Helper function to check if an RGB color is black without opacity
+const isBlackWithoutOpacity = (rgbColor: string): boolean => {
+    const match = rgbColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (!match) return false; // Not in rgb format
+    const r = parseInt(match[1], 10);
+    const g = parseInt(match[2], 10);
+    const b = parseInt(match[3], 10);
+    return r === 0 && g === 0 && b === 0;
+};
+
+// Helper function to check if a color is exactly black (with or without opacity)
+const isShadeOfBlack = (color: string): boolean => {
+    return isBlackWithOpacity(color) || isBlackWithoutOpacity(color);
 };
 
 export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {

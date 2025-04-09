@@ -60,36 +60,52 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
             // Generate table HTML for a worksheet.
             const generateTableHtml = (worksheet: Excel.Worksheet): string => {
-                // Determine the last non-empty row. A row is considered non-empty if any cell in that row
-                // has a non-null value or a non-default style (e.g., a custom fill, font, or border).
-                let lastNonEmptyRow = 0;
-                for (let rowNumber = 1; rowNumber <= worksheet.rowCount; rowNumber++) {
-                    const row = worksheet.getRow(rowNumber);
-                    let rowEmpty = true;
+                // Helper: Determine if a cell is effectively empty.
+                // A cell is considered empty only when:
+                //   - It has no value (null, undefined, or empty string), AND
+                //   - It does NOT have a fill with an fgColor argb (custom background color), AND
+                //   - It does NOT have any border defined on any side.
+                const isCellEmpty = (cell: Excel.Cell): boolean => {
+                    // Check if the cell has a text or numeric value.
+                    if (cell.value !== null && cell.value !== undefined && cell.value !== '') {
+                        return false;
+                    }
+                    // Check for custom fill: if a fill exists, and it has a defined foreground color.
+                    if (cell.fill && (cell.fill as any).fgColor && (cell.fill as any).fgColor.argb) {
+                        return false;
+                    }
+                    // Check for borders: if any side is defined, consider the cell non-empty.
+                    if (cell.border) {
+                        const { top, bottom, left, right } = cell.border;
+                        if (top || bottom || left || right) {
+                            return false;
+                        }
+                    }
+                    return true;
+                };
+
+                // Helper: Determine if an entire row is empty (all cells empty).
+                const isRowEmpty = (row: Excel.Row): boolean => {
                     for (let colNumber = 1; colNumber <= worksheet.columnCount; colNumber++) {
                         const cell = row.getCell(colNumber);
-                        // Check if the cell has some value.
-                        if (cell.value !== null && cell.value !== undefined && cell.value !== '') {
-                            rowEmpty = false;
-                            break;
-                        }
-                        // Check if the cell has custom fill, font, or border.
-                        if (cell.fill || cell.font || cell.border) {
-                            rowEmpty = false;
-                            break;
+                        if (!isCellEmpty(cell)) {
+                            return false;
                         }
                     }
-                    if (!rowEmpty) {
-                        lastNonEmptyRow = rowNumber;
-                    }
-                }
+                    return true;
+                };
 
-                // If all rows are empty, show one row.
+                // Use a backward scan from the total rowCount.
+                let lastNonEmptyRow = worksheet.rowCount;
+                while (lastNonEmptyRow > 0 && isRowEmpty(worksheet.getRow(lastNonEmptyRow))) {
+                    lastNonEmptyRow--;
+                }
+                // Ensure at least one row is rendered if the worksheet is completely empty.
                 if (lastNonEmptyRow === 0) {
                     lastNonEmptyRow = 1;
                 }
 
-                // Now build the HTML table using only rows up to lastNonEmptyRow.
+                // Build the HTML table from row 1 up to lastNonEmptyRow.
                 let tableHtml = '<table id="xlsx-table" border="1" cellspacing="0" cellpadding="5">';
                 for (let rowNumber = 1; rowNumber <= lastNonEmptyRow; rowNumber++) {
                     tableHtml += '<tr>';
@@ -104,7 +120,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
                         const cell = row.getCell(colNumber);
 
-                        // Check for custom background color even in an empty cell.
+                        // Process custom background color.
                         if (cell?.fill && (cell.fill as any).fgColor && (cell.fill as any).fgColor.argb) {
                             style += `background-color:${convertARGBToRGBA((cell.fill as any).fgColor.argb)};`;
                             hasCustomBackground = true;
@@ -123,18 +139,18 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                                 if (cell.font.name) {
                                     style += `font-family:${cell.font.name};`;
                                 }
-                                if (cell.font.color && typeof cell.font.color.argb === "string") {
+                                if (cell.font.color && typeof cell.font.color.argb === 'string') {
                                     style += `color: ${convertARGBToRGBA(cell.font.color.argb)};`;
                                 } else {
-                                    style += `color: rgb(0, 0, 0);`;
+                                    style += 'color: rgb(0, 0, 0);';
                                     isDefaultBlack = true;
                                 }
                             } else {
-                                style += `color: rgb(0, 0, 0);`;
+                                style += 'color: rgb(0, 0, 0);';
                                 isDefaultBlack = true;
                             }
                         } else {
-                            style += `color: rgb(0, 0, 0);`;
+                            style += 'color: rgb(0, 0, 0);';
                             isDefaultBlack = true;
                         }
 
@@ -153,7 +169,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             cellHasBlackBorder = true;
                         }
 
-                        // Add data attributes to record the default state.
+                        // Add data attributes for potential further usage.
                         const dataAttrs = [];
                         if (isDefaultBlack) {
                             dataAttrs.push('data-default-color="true"');
@@ -164,7 +180,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                         if (cellHasBlackBorder) {
                             dataAttrs.push('data-black-border="true"');
                         }
-                        if (!cell || (!cell.value && !hasCustomBackground)) {
+                        if (!cell || (cell.value === null && !hasCustomBackground)) {
                             dataAttrs.push('data-empty="true"');
                         }
                         const dataAttrStr = dataAttrs.join(' ');

@@ -255,15 +255,15 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     z-index: 1;
                 }
                 .toggle-button {
-                    padding: 8px 16px;
+                    max-height: 42px;
+                    padding: 8px;
                     font-size: 14px;
-                    font-weight: bold;
                     border: none;
                     border-radius: 4px;
                     cursor: pointer;
                     display: flex;
                     align-items: center;
-                    gap: 8px;
+                    justify-content: center;
                     background-color: #2196f3;
                     color: white;
                     transition: all 0.2s ease;
@@ -275,8 +275,8 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     background-color: #1565c0;
                 }
                 .toggle-button svg {
-                    width: 16px;
-                    height: 16px;
+                    width: 20px;
+                    height: 20px;
                     stroke: white;
                 }
                 .sheet-selector {
@@ -295,10 +295,20 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     ${sheetOptionsHtml}
                 </select>
                 <button id="toggleButton" class="toggle-button">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/>
+                    <svg id="lightIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1" x2="12" y2="3"/>
+                        <line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1" y1="12" x2="3" y2="12"/>
+                        <line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                     </svg>
-                    Toggle Background
+                    <svg id="darkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
                 </button>
             </div>
             <div class="table-container">
@@ -310,6 +320,8 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 const toggleButton = document.getElementById('toggleButton');
                 const body = document.body;
                 const tableContent = document.getElementById('table-content');
+                const lightIcon = document.getElementById('lightIcon');
+                const darkIcon = document.getElementById('darkIcon');
 
                 // Function to update table content based on selected sheet.
                 const updateTable = (sheetIndex) => {
@@ -326,9 +338,19 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 toggleButton.addEventListener('click', () => {
                     body.classList.toggle('alt-bg');
                     const isDarkMode = body.classList.contains('alt-bg');
+
+                    // Toggle icons
+                    if (isDarkMode) {
+                        lightIcon.style.display = 'block';
+                        darkIcon.style.display = 'none';
+                    } else {
+                        lightIcon.style.display = 'none';
+                        darkIcon.style.display = 'block';
+                    }
+
                     const whiteBorderColor = 'rgb(255, 255, 255)'; // White for dark mode borders
                     const blackBorderColor = 'rgb(0, 0, 0)'; // Black for light mode borders
-                    
+
                     // Toggle the default cell background colors.
                     const defaultBgCells = document.querySelectorAll('#xlsx-table td[data-default-bg="true"]');
                     defaultBgCells.forEach(cell => {

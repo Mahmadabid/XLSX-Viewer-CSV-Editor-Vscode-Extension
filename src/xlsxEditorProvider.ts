@@ -155,7 +155,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                         if (cellHasBlackBorder) dataAttrs.push('data-black-border="true"');
                         if (!cell || (cell.value === null && !hasCustomBackground)) dataAttrs.push('data-empty="true"');
 
-                        tableHtml += `<td ${dataAttrs.join(' ')} style="${style}">${cellValue}</td>`;
+                        tableHtml += `<td ${dataAttrs.join(' ')} style="${style}"><span>${cellValue}</span></td>`;
                     }
                     tableHtml += '</tr>';
                 }
@@ -201,7 +201,32 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
     td:nth-child(1), th:nth-child(1) {
         width: 20px !important;
     }
-    td { background-color: white; }
+    td { 
+        position: relative;
+        padding: 0;
+        border: 1px solid #e2e3e3;
+        min-width: 80px;
+        outline: none;
+    }
+
+    td.selected {
+        border: 2px solid #1a73e8;
+        padding: 0;
+    }
+
+    td > span {
+        display: block;
+        padding: 4px 8px;
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+    }
+
+    td.selected > span {
+        padding: 3px 7px;
+    }
+
     .tooltip {
         position: relative;
         display: inline-block;
@@ -243,7 +268,58 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
     .sheet-selector:hover { border-color: #1976d2; }
     th.col-header, th.row-header { font-weight: bold; text-align: center; background-color: #f1f1f1; color: #000; border: 1px solid #ccc; }
     body.alt-bg th.col-header, body.alt-bg th.row-header { background-color: rgb(69, 69, 69); color: #fff; border-color: #ccc); }
-    </style>
+    /* Styles for cell selection like Excel */
+    td.selected {
+        background-color: rgba(26, 115, 232, 0.1) !important;
+        border: 2px solid rgb(189, 200, 215) !important;
+    }
+
+    /* Dark mode selected cell */
+    body.alt-bg td.selected {
+        background-color: rgba(167, 188, 216, 0.2) !important;
+        border: 2px solid rgb(189, 200, 215) !important;
+    }
+
+    td.selected::after {
+        content: '';
+        position: absolute;
+        right: -2px;
+        bottom: -2px;
+        width: 6px;
+        height: 6px;
+        background: #1a73e8;
+        border: 1px solid white;
+    }
+
+    /* Row and Column selection styles */
+    td.column-selected, th.column-selected {
+        background-color: rgba(26, 115, 232, 0.1) !important;
+        border: 2px solid rgb(192, 219, 255) !important;
+    }
+
+    td.row-selected, th.row-selected {
+        background-color: rgba(26, 115, 232, 0.1) !important;
+        border: 2px solid rgb(192, 219, 255) !important;
+    }
+
+    /* Dark mode for row and column selection */
+    body.alt-bg td.column-selected,
+    body.alt-bg th.column-selected,
+    body.alt-bg td.row-selected,
+    body.alt-bg th.row-selected {
+        background-color: rgba(167, 188, 216, 0.2) !important;
+        border: 2px solid rgb(189, 200, 215) !important;
+    }
+
+    th.col-header, th.row-header {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    th.col-header:hover, th.row-header:hover {
+        background-color: rgba(26, 115, 232, 0.2);
+    }
+</style>
 </head>
 <body>
 <div class="button-container">
@@ -257,102 +333,115 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
 </svg>
 </button>
 </div>
-<div class="table-container"><div id="table-content"></div></div>
+<div id="content">${workbookState.worksheets[0].tableHtml}</div>
 <script>
-const workbookState = ${JSON.stringify(workbookState)};
-const sheetSelector = document.getElementById('sheetSelector');
-const toggleButton = document.getElementById('toggleButton');
-const body = document.body;
-const tableContent = document.getElementById('table-content');
-const lightIcon = document.getElementById('lightIcon');
-const darkIcon = document.getElementById('darkIcon');
+(function() {
+    const vscode = acquireVsCodeApi();
+    const workbookState = ${JSON.stringify(workbookState)};
+    const sheetSelector = document.getElementById('sheetSelector');
+    const toggleButton = document.getElementById('toggleButton');
+    const content = document.getElementById('content');
 
-const updateTable = (sheetIndex) => {
-    tableContent.innerHTML = workbookState.worksheets[sheetIndex].tableHtml;
-};
-updateTable(0);
-sheetSelector.addEventListener('change', (e) => {
-    updateTable(parseInt(e.target.value));
-});
-toggleButton.addEventListener('click', () => {
-    body.classList.toggle('alt-bg');
-    const isDarkMode = body.classList.contains('alt-bg');
-    lightIcon.style.display = isDarkMode ? 'block' : 'none';
-    darkIcon.style.display = isDarkMode ? 'none' : 'block';
-    const whiteBorderColor = 'rgb(255, 255, 255)';
-    const blackBorderColor = 'rgb(0, 0, 0)';
-    const defaultBgCells = document.querySelectorAll('#xlsx-table td[data-default-bg="true"]');
-    defaultBgCells.forEach(cell => {
-        cell.style.backgroundColor = isDarkMode ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)";
+    // Initialize the first sheet
+    content.innerHTML = workbookState.worksheets[0].tableHtml;
+
+    // Update table when sheet is changed
+    sheetSelector.addEventListener('change', (e) => {
+        const selectedIndex = parseInt(e.target.value);
+        content.innerHTML = workbookState.worksheets[selectedIndex].tableHtml;
     });
-    const defaultBothCells = document.querySelectorAll('#xlsx-table td[data-default-bg="true"][data-default-color="true"]');
-    defaultBothCells.forEach(cell => {
-        cell.style.color = isDarkMode ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)";
+
+    toggleButton.addEventListener('click', () => {
+        document.body.classList.toggle('alt-bg');
+        const isDarkMode = document.body.classList.contains('alt-bg');
+        const lightIcon = document.getElementById('lightIcon');
+        const darkIcon = document.getElementById('darkIcon');
+
+        lightIcon.style.display = isDarkMode ? 'block' : 'none';
+        darkIcon.style.display = isDarkMode ? 'none' : 'block';
+
+        const defaultBgCells = document.querySelectorAll('td[data-default-bg="true"]');
+        defaultBgCells.forEach(cell => {
+            cell.style.backgroundColor = isDarkMode ? "rgb(33, 33, 33)" : "rgb(255, 255, 255)";
+        });
+
+        const defaultBothCells = document.querySelectorAll('td[data-default-bg="true"][data-default-color="true"]');
+        defaultBothCells.forEach(cell => {
+            cell.style.color = isDarkMode ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)";
+        });
     });
-    const blackBorderCells = document.querySelectorAll('#xlsx-table td[data-black-border="true"]');
-    blackBorderCells.forEach(cell => {
-        cell.style.borderColor = isDarkMode ? whiteBorderColor : blackBorderColor;
-    });
-});
 
-// Add a button to toggle the table's min-width between 50%, 100%, and back to default
-const toggleMinWidthButton = document.createElement('button');
-toggleMinWidthButton.id = 'toggleMinWidthButton';
-toggleMinWidthButton.className = 'toggle-button';
-toggleMinWidthButton.innerHTML = '<svg fill="#ffffff" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M19.5,21 C20.3284271,21 21,20.3284271 21,19.5 L21,11.5 C21,10.6715729 20.3284271,10 19.5,10 L11.5,10 C10.6715729,10 10,10.6715729 10,11.5 L10,19.5 C10,20.3284271 10.6715729,21 11.5,21 L19.5,21 Z M5,20.2928932 L6.14644661,19.1464466 C6.34170876,18.9511845 6.65829124,18.9511845 6.85355339,19.1464466 C7.04881554,19.3417088 7.04881554,19.6582912 6.85355339,19.8535534 L4.85355339,21.8535534 C4.65829124,22.0488155 4.34170876,22.0488155 4.14644661,21.8535534 L2.14644661,19.8535534 C1.95118446,19.6582912 1.95118446,19.3417088 2.14644661,19.1464466 C2.34170876,18.9511845 2.65829124,18.9511845 2.85355339,19.1464466 L4,20.2928932 L4,7.5 C4,7.22385763 4.22385763,7 4.5,7 C4.77614237,7 5,7.22385763 5,7.5 L5,20.2928932 L5,20.2928932 Z M20.2928932,4 L19.1464466,2.85355339 C18.9511845,2.65829124 18.9511845,2.34170876 19.1464466,2.14644661 C19.3417088,1.95118446 19.6582912,1.95118446 19.8535534,2.14644661 L21.8535534,4.14644661 C22.0488155,4.34170876 22.0488155,4.65829124 21.8535534,4.85355339 L19.8535534,6.85355339 C19.6582912,7.04881554 19.3417088,7.04881554 19.1464466,6.85355339 C18.9511845,6.65829124 18.9511845,6.34170876 19.1464466,6.14644661 L20.2928932,5 L7.5,5 C7.22385763,5 7,4.77614237 7,4.5 C7,4.22385763 7.22385763,4 7.5,4 L20.2928932,4 Z M19.5,22 L11.5,22 C10.1192881,22 9,20.8807119 9,19.5 L9,11.5 C9,10.1192881 10.1192881,9 11.5,9 L19.5,9 C20.8807119,9 22,10.1192881 22,11.5 L22,19.5 C22,20.8807119 20.8807119,22 19.5,22 Z"></path> </g></svg>&nbsp; Default';
-
-// Add tooltip to the button
-const tooltipText = document.createElement('span');
-tooltipText.className = 'tooltiptext';
-tooltipText.innerHTML = 'Toggle table width between 50%, 100%, and default. <br><span>It will only work for tables which have size less than editor screen width.</span>';
-toggleMinWidthButton.classList.add('tooltip');
-toggleMinWidthButton.appendChild(tooltipText);
-
-// Add the button to the button container
-document.querySelector('.button-container').appendChild(toggleMinWidthButton);
-
-// Add event listener to the button
-let minWidthState = 2; // 0: 50%, 1: 100%, 2: default
-const minWidthValues = ['50%', '100%', ''];
-const buttonLabels = [
-    '<svg fill="#ffffff" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M19.5,21 C20.3284271,21 21,20.3284271 21,19.5 L21,11.5 C21,10.6715729 20.3284271,10 19.5,10 L11.5,10 C10.6715729,10 10,10.6715729 10,11.5 L10,19.5 C10,20.3284271 10.6715729,21 11.5,21 L19.5,21 Z M5,20.2928932 L6.14644661,19.1464466 C6.34170876,18.9511845 6.65829124,18.9511845 6.85355339,19.1464466 C7.04881554,19.3417088 7.04881554,19.6582912 6.85355339,19.8535534 L4.85355339,21.8535534 C4.65829124,22.0488155 4.34170876,22.0488155 4.14644661,21.8535534 L2.14644661,19.8535534 C1.95118446,19.6582912 1.95118446,19.3417088 2.14644661,19.1464466 C2.34170876,18.9511845 2.65829124,18.9511845 2.85355339,19.1464466 L4,20.2928932 L4,7.5 C4,7.22385763 4.22385763,7 4.5,7 C4.77614237,7 5,7.22385763 5,7.5 L5,20.2928932 L5,20.2928932 Z M20.2928932,4 L19.1464466,2.85355339 C18.9511845,2.65829124 18.9511845,2.34170876 19.1464466,2.14644661 C19.3417088,1.95118446 19.6582912,1.95118446 19.8535534,2.14644661 L21.8535534,4.14644661 C22.0488155,4.34170876 22.0488155,4.65829124 21.8535534,4.85355339 L19.8535534,6.85355339 C19.6582912,7.04881554 19.3417088,7.04881554 19.1464466,6.85355339 C18.9511845,6.65829124 18.9511845,6.34170876 19.1464466,6.14644661 L20.2928932,5 L7.5,5 C7.22385763,5 7,4.77614237 7,4.5 C7,4.22385763 7.22385763,4 7.5,4 L20.2928932,4 Z M19.5,22 L11.5,22 C10.1192881,22 9,20.8807119 9,19.5 L9,11.5 C9,10.1192881 10.1192881,9 11.5,9 L19.5,9 C20.8807119,9 22,10.1192881 22,11.5 L22,19.5 C22,20.8807119 20.8807119,22 19.5,22 Z"></path> </g></svg>&nbsp; 50%',
-    '<svg fill="#ffffff" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M19.5,21 C20.3284271,21 21,20.3284271 21,19.5 L21,11.5 C21,10.6715729 20.3284271,10 19.5,10 L11.5,10 C10.6715729,10 10,10.6715729 10,11.5 L10,19.5 C10,20.3284271 10.6715729,21 11.5,21 L19.5,21 Z M5,20.2928932 L6.14644661,19.1464466 C6.34170876,18.9511845 6.65829124,18.9511845 6.85355339,19.1464466 C7.04881554,19.3417088 7.04881554,19.6582912 6.85355339,19.8535534 L4.85355339,21.8535534 C4.65829124,22.0488155 4.34170876,22.0488155 4.14644661,21.8535534 L2.14644661,19.8535534 C1.95118446,19.6582912 1.95118446,19.3417088 2.14644661,19.1464466 C2.34170876,18.9511845 2.65829124,18.9511845 2.85355339,19.1464466 L4,20.2928932 L4,7.5 C4,7.22385763 4.22385763,7 4.5,7 C4.77614237,7 5,7.22385763 5,7.5 L5,20.2928932 L5,20.2928932 Z M20.2928932,4 L19.1464466,2.85355339 C18.9511845,2.65829124 18.9511845,2.34170876 19.1464466,2.14644661 C19.3417088,1.95118446 19.6582912,1.95118446 19.8535534,2.14644661 L21.8535534,4.14644661 C22.0488155,4.34170876 22.0488155,4.65829124 21.8535534,4.85355339 L19.8535534,6.85355339 C19.6582912,7.04881554 19.3417088,7.04881554 19.1464466,6.85355339 C18.9511845,6.65829124 18.9511845,6.34170876 19.1464466,6.14644661 L20.2928932,5 L7.5,5 C7.22385763,5 7,4.77614237 7,4.5 C7,4.22385763 7.22385763,4 7.5,4 L20.2928932,4 Z M19.5,22 L11.5,22 C10.1192881,22 9,20.8807119 9,19.5 L9,11.5 C9,10.1192881 10.1192881,9 11.5,9 L19.5,9 C20.8807119,9 22,10.1192881 22,11.5 L22,19.5 C22,20.8807119 20.8807119,22 19.5,22 Z"></path> </g></svg>&nbsp; 100%',
-    '<svg fill="#ffffff" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M19.5,21 C20.3284271,21 21,20.3284271 21,19.5 L21,11.5 C21,10.6715729 20.3284271,10 19.5,10 L11.5,10 C10.6715729,10 10,10.6715729 10,11.5 L10,19.5 C10,20.3284271 10.6715729,21 11.5,21 L19.5,21 Z M5,20.2928932 L6.14644661,19.1464466 C6.34170876,18.9511845 6.65829124,18.9511845 6.85355339,19.1464466 C7.04881554,19.3417088 7.04881554,19.6582912 6.85355339,19.8535534 L4.85355339,21.8535534 C4.65829124,22.0488155 4.34170876,22.0488155 4.14644661,21.8535534 L2.14644661,19.8535534 C1.95118446,19.6582912 1.95118446,19.3417088 2.14644661,19.1464466 C2.34170876,18.9511845 2.65829124,18.9511845 2.85355339,19.1464466 L4,20.2928932 L4,7.5 C4,7.22385763 4.22385763,7 4.5,7 C4.77614237,7 5,7.22385763 5,7.5 L5,20.2928932 L5,20.2928932 Z M20.2928932,4 L19.1464466,2.85355339 C18.9511845,2.65829124 18.9511845,2.34170876 19.1464466,2.14644661 C19.3417088,1.95118446 19.6582912,1.95118446 19.8535534,2.14644661 L21.8535534,4.14644661 C22.0488155,4.34170876 22.0488155,4.65829124 21.8535534,4.85355339 L19.8535534,6.85355339 C19.6582912,7.04881554 19.3417088,7.04881554 19.1464466,6.85355339 C18.9511845,6.65829124 18.9511845,6.34170876 19.1464466,6.14644661 L20.2928932,5 L7.5,5 C7.22385763,5 7,4.77614237 7,4.5 C7,4.22385763 7.22385763,4 7.5,4 L20.2928932,4 Z M19.5,22 L11.5,22 C10.1192881,22 9,20.8807119 9,19.5 L9,11.5 C9,10.1192881 10.1192881,9 11.5,9 L19.5,9 C20.8807119,9 22,10.1192881 22,11.5 L22,19.5 C22,20.8807119 20.8807119,22 19.5,22 Z"></path> </g></svg>&nbsp; Default'
-];
-
-toggleMinWidthButton.addEventListener('click', () => {
-    const table = document.getElementById('xlsx-table');
-    if (table) {
-        minWidthState = (minWidthState + 1) % 3;
-        table.style.minWidth = minWidthValues[minWidthState];
+    // Function to handle all click events for selection
+    function handleSelection(event) {
+        const target = event.target;
         
-        // Store the tooltip element and force hide it
-        const tooltip = toggleMinWidthButton.querySelector('.tooltiptext');
-        const tooltipContent = tooltip.innerHTML;
-        tooltip.style.opacity = '0';
-        tooltip.style.visibility = 'hidden';
-        
-        // Update button content while preserving tooltip
-        toggleMinWidthButton.innerHTML = buttonLabels[minWidthState];
-        
-        // Recreate and reattach the tooltip, maintaining the hidden state
-        const newTooltip = document.createElement('span');
-        newTooltip.className = 'tooltiptext';
-        newTooltip.style.opacity = '0';
-        newTooltip.style.visibility = 'hidden';
-        newTooltip.innerHTML = tooltipContent;
-        toggleMinWidthButton.appendChild(newTooltip);
+        // Remove all previous selections
+        document.querySelectorAll('td.selected, td.column-selected, td.row-selected, th.column-selected, th.row-selected')
+            .forEach(el => el.classList.remove('selected', 'column-selected', 'row-selected'));
+
+        if (target.classList.contains('col-header')) {
+            // Column header clicked
+            const columnIndex = target.cellIndex;
+            const table = target.closest('table');
+            if (table) {
+                const cells = table.querySelectorAll('tr > *:nth-child(' + (columnIndex + 1) + ')');
+                cells.forEach(cell => cell.classList.add('column-selected'));
+            }
+        } else if (target.classList.contains('row-header')) {
+            // Row header clicked
+            const row = target.parentElement;
+            if (row) {
+                row.querySelectorAll('td, th').forEach(cell => cell.classList.add('row-selected'));
+            }
+        } else {
+            // Regular cell click handling
+            const cell = target.closest('td');
+            if (cell && !cell.closest('th')) {
+                cell.classList.add('selected');
+            }
+        }
     }
-});
 
-// Reset tooltip visibility on mouseenter
-toggleMinWidthButton.addEventListener('mouseenter', () => {
-    const tooltip = toggleMinWidthButton.querySelector('.tooltiptext');
-    if (tooltip) {
-        tooltip.style.removeProperty('opacity');
-        tooltip.style.removeProperty('visibility');
+    // Function to handle copy functionality
+    function handleCopy(event) {
+        if (event.ctrlKey && event.key === 'c') {
+            const selectedCell = document.querySelector('td.selected');
+            const selectedColumn = document.querySelectorAll('td.column-selected');
+            const selectedRow = document.querySelectorAll('td.row-selected');
+
+            let textToCopy = '';
+            
+            if (selectedColumn.length > 0) {
+                textToCopy = Array.from(selectedColumn)
+                    .map(cell => cell.textContent.trim())
+                    .join('\\n');
+            } else if (selectedRow.length > 0) {
+                textToCopy = Array.from(selectedRow)
+                    .map(cell => cell.textContent.trim())
+                    .join('\\t');
+            } else if (selectedCell) {
+                textToCopy = selectedCell.textContent.trim();
+            }
+
+            if (textToCopy) {
+                navigator.clipboard.writeText(textToCopy);
+                // Visual feedback for copy
+                const selectedElements = document.querySelectorAll('td.selected, td.column-selected, td.row-selected');
+                selectedElements.forEach(el => {
+                    const originalBg = el.style.backgroundColor;
+                    el.style.backgroundColor = 'rgba(26, 115, 232, 0.2)';
+                    setTimeout(() => {
+                        el.style.backgroundColor = originalBg;
+                    }, 200);
+                });
+            }
+        }
     }
-});
+
+    // Attach event listeners
+    document.addEventListener('click', handleSelection);
+    document.addEventListener('keydown', handleCopy);
+})();
 </script>
 </body>
 </html>`;

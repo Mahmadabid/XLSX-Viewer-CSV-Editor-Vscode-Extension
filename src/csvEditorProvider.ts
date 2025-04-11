@@ -279,10 +279,12 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 /* Row and Column selection styles */
                 td.column-selected, th.column-selected {
                     background-color: rgba(26, 115, 232, 0.1) !important;
+                    border: 2px solid rgb(192, 219, 255) !important;
                 }
 
                 td.row-selected, th.row-selected {
                     background-color: rgba(26, 115, 232, 0.1) !important;
+                    border: 2px solid rgb(192, 219, 255) !important;
                 }
 
                 /* Dark mode for row and column selection */
@@ -290,7 +292,8 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 body.alt-bg th.column-selected,
                 body.alt-bg td.row-selected,
                 body.alt-bg th.row-selected {
-                    background-color: rgba(189, 200, 215, 0.2) !important;
+                    background-color: rgba(167, 188, 216, 0.2) !important;
+                    border: 2px solid rgb(189, 200, 215) !important;
                 }
 
                 th.col-header, th.row-header {

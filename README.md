@@ -1,5 +1,7 @@
 # XLSX Viewer & CSV Editor - VS Code Extension
 
+This is an open-source project that allows you to view XLSX files with styles, fonts, and colors from Excel files, supporting multiple sheets. Additionally, it provides a table view and editing capabilities for CSV files directly in VS Code.
+
 ## 📌 Overview
 
 XLSX Viewer & CSV Editor is a powerful **Visual Studio Code** extension that allows users to **open and view Excel files (.xlsx)** and **edit CSV files directly within VS Code**. It provides a seamless, lightweight experience without requiring external software like Microsoft Excel or Google Sheets.

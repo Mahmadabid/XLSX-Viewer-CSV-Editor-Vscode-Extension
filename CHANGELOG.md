@@ -1,9 +1,13 @@
-# Change Log
+# Changelog
 
-All notable changes to the "xlsx-viewer" extension will be documented in this file.
+## v1.2.0 - Enhanced Toggle Background
+- **Improved Toggle Background**: Updated toggle button functionality for light and dark modes with alternating icons.
+- **UI Enhancements**: Adjusted icon sizes and improved visual consistency.
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## v1.1.0 - XLSX Viewer & CSV Editor (New Name)
+- **New Name**: Previously known as `XLSX Viewer`.
+- **Features**: Added CSV file editing capabilities in a structured table view.
+- **Bug Fixes**: Improved performance and UI enhancements.
 
-## [Unreleased]
-
-- Initial release
+## v1.0.0 - XLSX Viewer
+- Initial release with basic functionality for viewing Excel files.

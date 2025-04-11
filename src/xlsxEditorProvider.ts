@@ -287,6 +287,13 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     background-color: white;
                     cursor: pointer;
                 }
+                .sheet-selector:focus {
+                    outline: none;
+                    border-color: #2196f3 !important;
+                }
+                .sheet-selector:hover {
+                    border-color: #1976d2;
+                }
             </style>
         </head>
         <body>

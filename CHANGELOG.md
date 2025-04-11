@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.0 - Enhanced Selection Features
+- **Text Selection**: Added text selection for copying with ease.
+- **Cell Selection**: Improved cell, row, and column selection functionality
+- **Dark Mode Support**: Enhanced text selection visibility in both light and dark modes
+- **UI Improvements**: Better visual feedback for selections and copying
+
 ## v1.2.0 - Enhanced Toggle Background
 - **Improved Toggle Background**: Updated toggle button functionality for light and dark modes with alternating icons.
 - **UI Enhancements**: Adjusted icon sizes and improved visual consistency.

@@ -242,8 +242,8 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
     .sheet-selector:focus { outline: none; border-color: #2196f3 !important; }
     .sheet-selector:hover { border-color: #1976d2; }
     th.col-header, th.row-header { font-weight: bold; text-align: center; background-color: #f1f1f1; color: #000; border: 1px solid #ccc; }
-    body.alt-bg th.col-header, body.alt-bg th.row-header { background-color: #222; color: #fff; border-color: #444; }
-</style>
+    body.alt-bg th.col-header, body.alt-bg th.row-header { background-color: rgb(69, 69, 69); color: #fff; border-color: #ccc); }
+    </style>
 </head>
 <body>
 <div class="button-container">

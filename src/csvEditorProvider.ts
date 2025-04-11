@@ -22,9 +22,21 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
             const rows = csvContent.split('\n').map(row => row.split(','));
 
             const generateTableHtml = () => {
-                let tableHtml = '<table border="1" cellspacing="0" cellpadding="5">';
-                rows.forEach(row => {
-                    tableHtml += '<tr>';
+                let tableHtml = '<table id="csv-table" border="1" cellspacing="0" cellpadding="5">';
+
+                // Add column headers (alphabets)
+                tableHtml += '<thead><tr><th class="row-header">&nbsp;</th>';
+                const columnCount = rows[0]?.length || 0;
+                for (let colNumber = 1; colNumber <= columnCount; colNumber++) {
+                    const colLabel = String.fromCharCode(64 + colNumber); // Convert to A, B, C, etc.
+                    tableHtml += `<th class="col-header">${colLabel}</th>`;
+                }
+                tableHtml += '</tr></thead>';
+
+                // Add rows with row headers (numbers)
+                tableHtml += '<tbody>';
+                rows.forEach((row, rowIndex) => {
+                    tableHtml += `<tr><th class="row-header">${rowIndex + 1}</th>`;
                     row.forEach(cell => {
                         const cellContent = cell.trim();
                         const isEmpty = cellContent === '';
@@ -38,7 +50,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     });
                     tableHtml += '</tr>';
                 });
-                tableHtml += '</table>';
+                tableHtml += '</tbody></table>';
                 return tableHtml;
             };
 
@@ -100,7 +112,8 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     text-align: left;
                     white-space: nowrap;
                 }
-                .button-container {
+                    body.alt-bg th.col-header, body.alt-bg th.row-header { background-color: rgb(69, 69, 69); color: #fff; border-color: #ccc; }
+                    .button-container {
                     margin-bottom: 10px;
                     display: flex;
                     gap: 10px;
@@ -108,6 +121,13 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     top: 0;
                     background-color: inherit;
                     z-index: 1;
+                }
+                th {
+                    background-color: rgb(247, 247, 247);
+                }
+                td:nth-child(1), th:nth-child(1) {
+                    width: 20px !important;
+                    background-color: rgb(247, 247, 247);
                 }
                 .toggle-button {
                     max-height: 42px;
@@ -196,14 +216,14 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
         </head>
         <body>
             <div class="button-container">
-                <button id="toggleViewButton" class="toggle-button">
+                <button id="toggleViewButton" class="toggle-button" tilte="Edit File in Vscode Default Editor">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 20h9" />
                         <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                     </svg>
                     Edit File
                 </button>
-                <button id="toggleBackgroundButton" class="toggle-button">
+                <button id="toggleBackgroundButton" class="toggle-button" title="Toggle Light/Dark Mode">
                     <svg id="lightIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
                         <circle cx="12" cy="12" r="5"/>
                         <line x1="12" y1="1" x2="12" y2="3"/>

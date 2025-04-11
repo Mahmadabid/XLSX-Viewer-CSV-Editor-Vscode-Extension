@@ -202,6 +202,35 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         width: 20px !important;
     }
     td { background-color: white; }
+    .tooltip {
+        position: relative;
+        display: inline-block;
+    }
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        background-color: rgb(231, 248, 255);
+        color: rgb(0, 0, 0);
+        text-align: center;
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 1;
+        top: 130%;
+        left: 50%;
+        margin-left: -125px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        white-space: normal;
+        line-height: 1.5;
+        width: 250px;
+    }
+    .tooltip .tooltiptext span {
+        color: #0066cc;
+    }
+    .tooltip:hover .tooltiptext {
+        opacity: 1;
+        visibility: visible;
+    }
     body.alt-bg { background-color: black; }
     .alt-bg td[data-default-bg="true"] { background-color: black; }
     .button-container { margin-bottom: 10px; display: flex; gap: 10px; position: sticky; top: 0; background-color: inherit; z-index: 1; }
@@ -214,16 +243,12 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
     .sheet-selector:hover { border-color: #1976d2; }
     th.col-header, th.row-header { font-weight: bold; text-align: center; background-color: #f1f1f1; color: #000; border: 1px solid #ccc; }
     body.alt-bg th.col-header, body.alt-bg th.row-header { background-color: #222; color: #fff; border-color: #444; }
-    .tooltip { position: relative; display: inline-block; }
-    .tooltip .tooltiptext { visibility: hidden; width: 200px; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 5px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -100px; opacity: 0; transition: opacity 0.3s; }
-    .tooltip .tooltiptext .warning { font-weight: bold; color: #ffcc00; }
-    .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
 </style>
 </head>
 <body>
 <div class="button-container">
 <select id="sheetSelector" class="sheet-selector">${sheetOptionsHtml}</select>
-<button id="toggleButton" class="toggle-button">
+<button id="toggleButton" class="toggle-button" title="Toggle Dark/Light Mode">
 <svg id="lightIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
 <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
 </svg>
@@ -270,17 +295,18 @@ toggleButton.addEventListener('click', () => {
     });
 });
 
-// Remove the setMinWidthButton
-const setMinWidthButton = document.getElementById('setMinWidthButton');
-if (setMinWidthButton) {
-    setMinWidthButton.remove();
-}
-
 // Add a button to toggle the table's min-width between 50%, 100%, and back to default
 const toggleMinWidthButton = document.createElement('button');
 toggleMinWidthButton.id = 'toggleMinWidthButton';
 toggleMinWidthButton.className = 'toggle-button';
 toggleMinWidthButton.innerHTML = '<svg fill="#ffffff" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M19.5,21 C20.3284271,21 21,20.3284271 21,19.5 L21,11.5 C21,10.6715729 20.3284271,10 19.5,10 L11.5,10 C10.6715729,10 10,10.6715729 10,11.5 L10,19.5 C10,20.3284271 10.6715729,21 11.5,21 L19.5,21 Z M5,20.2928932 L6.14644661,19.1464466 C6.34170876,18.9511845 6.65829124,18.9511845 6.85355339,19.1464466 C7.04881554,19.3417088 7.04881554,19.6582912 6.85355339,19.8535534 L4.85355339,21.8535534 C4.65829124,22.0488155 4.34170876,22.0488155 4.14644661,21.8535534 L2.14644661,19.8535534 C1.95118446,19.6582912 1.95118446,19.3417088 2.14644661,19.1464466 C2.34170876,18.9511845 2.65829124,18.9511845 2.85355339,19.1464466 L4,20.2928932 L4,7.5 C4,7.22385763 4.22385763,7 4.5,7 C4.77614237,7 5,7.22385763 5,7.5 L5,20.2928932 L5,20.2928932 Z M20.2928932,4 L19.1464466,2.85355339 C18.9511845,2.65829124 18.9511845,2.34170876 19.1464466,2.14644661 C19.3417088,1.95118446 19.6582912,1.95118446 19.8535534,2.14644661 L21.8535534,4.14644661 C22.0488155,4.34170876 22.0488155,4.65829124 21.8535534,4.85355339 L19.8535534,6.85355339 C19.6582912,7.04881554 19.3417088,7.04881554 19.1464466,6.85355339 C18.9511845,6.65829124 18.9511845,6.34170876 19.1464466,6.14644661 L20.2928932,5 L7.5,5 C7.22385763,5 7,4.77614237 7,4.5 C7,4.22385763 7.22385763,4 7.5,4 L20.2928932,4 Z M19.5,22 L11.5,22 C10.1192881,22 9,20.8807119 9,19.5 L9,11.5 C9,10.1192881 10.1192881,9 11.5,9 L19.5,9 C20.8807119,9 22,10.1192881 22,11.5 L22,19.5 C22,20.8807119 20.8807119,22 19.5,22 Z"></path> </g></svg>&nbsp; Default';
+
+// Add tooltip to the button
+const tooltipText = document.createElement('span');
+tooltipText.className = 'tooltiptext';
+tooltipText.innerHTML = 'Toggle table width between 50%, 100%, and default. <br><span>It will only work for tables which have size less than editor screen width.</span>';
+toggleMinWidthButton.classList.add('tooltip');
+toggleMinWidthButton.appendChild(tooltipText);
 
 // Add the button to the button container
 document.querySelector('.button-container').appendChild(toggleMinWidthButton);
@@ -302,23 +328,6 @@ toggleMinWidthButton.addEventListener('click', () => {
         toggleMinWidthButton.innerHTML = buttonLabels[minWidthState];
     }
 });
-
-// Add a tooltip to the toggleMinWidthButton
-const tooltip = document.createElement('div');
-tooltip.className = 'tooltip';
-tooltip.innerHTML = `
-    <button id="toggleMinWidthButton" class="toggle-button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 9h16M4 15h16"/><circle cx="12" cy="12" r="3"/>
-        </svg> 50%
-    </button>
-    <span class="tooltiptext">
-        <span class="warning">Note:</span> This button works only if the table's width is less than the editor screen width.
-    </span>
-`;
-
-// Replace the existing button with the tooltip-wrapped button
-document.querySelector('.button-container').appendChild(tooltip);
 </script>
 </body>
 </html>`;

@@ -46,7 +46,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             isEmpty ? 'data-empty="true"' : ''
                         ].filter(Boolean).join(' ');
 
-                        tableHtml += `<td ${dataAttrs}>${isEmpty ? '&nbsp;' : cellContent}</td>`;
+                        tableHtml += `<td ${dataAttrs}><span class="cell-content">${isEmpty ? '&nbsp;' : cellContent}</span></td>`;
                     });
                     tableHtml += '</tr>';
                 });
@@ -86,7 +86,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
         <html lang="en">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="viewport" width="device-width, initial-scale=1.0">
             <title>CSV Viewer</title>
             <style>
                 body { 
@@ -105,6 +105,10 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     width: auto;
                     min-width: 100%;
                     table-layout: fixed;
+                    user-select: text;
+                    -webkit-user-select: text;
+                    -moz-user-select: text;
+                    -ms-user-select: text;
                 }
                 th, td { 
                     border: 1px solid #ccc; 
@@ -159,11 +163,32 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 td { 
                     background-color: rgb(255, 255, 255);
                     color: rgb(0, 0, 0);
+                    cursor: text;
+                    user-select: text;
+                    -webkit-user-select: text;
+                    -moz-user-select: text;
+                    -ms-user-select: text;
+                    position: relative;
+                    padding: 0;
+                    border: 1px solid #ccc;
+                }
+                td span.cell-content {
+                    padding: 8px;
+                    display: block;
+                }
+                .cell-content {
+                    display: block;
+                    width: 100%;
+                    height: 100%;
+                    user-select: text;
+                    -webkit-user-select: text;
+                    -moz-user-select: text;
+                    -ms-user-select: text;
                 }
                 /* Alternate background when toggled */
-                body.alt-bg { background-color: rgb(0, 0, 0); }
+                body.alt-bg { background-color: rgb(33, 33, 33); }
                 body.alt-bg td { 
-                    background-color: rgb(0, 0, 0);
+                    background-color: rgb(33, 33, 33) !important;
                     color: rgb(255, 255, 255);
                 }
                 /* Empty cell border styles */
@@ -210,6 +235,45 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 .tooltip .tooltiptext .instruction {
                     color:rgb(2, 105, 190);
                     font-weight: normal;
+                }
+
+                /* Styles for cell selection like Google Sheets */
+                td {
+                    position: relative;
+                    padding: 4px 8px;
+                    border: 1px solid #e2e3e3;
+                    min-width: 80px;
+                    outline: none;
+                    user-select: none;
+                    -webkit-user-select: none;
+                    -moz-user-select: none;
+                    -ms-user-select: none;
+                }
+                
+                td.selected {
+                    border: 2px solid #1a73e8;
+                    padding: 3px 7px;
+                }
+
+                /* Light mode selected cell */
+                td.selected {
+                    background-color: rgba(26, 115, 232, 0.1) !important;
+                }
+
+                /* Dark mode selected cell */
+                body.alt-bg td.selected {
+                    background-color: rgba(189, 200, 215, 0.2) !important;
+                }
+                
+                td.selected::after {
+                    content: '';
+                    position: absolute;
+                    right: -2px;
+                    bottom: -2px;
+                    width: 6px;
+                    height: 6px;
+                    background: #1a73e8;
+                    border: 1px solid white;
                 }
 
             </style>
@@ -288,6 +352,42 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             cell.style.color = "rgb(0, 0, 0)";
                         }
                     });
+                });
+
+                // Single click handler for cell selection
+                document.addEventListener('click', (event) => {
+                    const cell = event.target.closest('td');
+                    
+                    // Remove previous selection
+                    document.querySelectorAll('td.selected').forEach(td => {
+                        td.classList.remove('selected');
+                    });
+
+                    if (cell && !cell.closest('th')) {
+                        // Add selection styling without selecting text
+                        cell.classList.add('selected');
+                    }
+                });
+
+                // Single keydown handler for copy
+                document.addEventListener('keydown', (event) => {
+                    if (event.ctrlKey && event.key === 'c') {
+                        const selectedCell = document.querySelector('td.selected');
+                        if (selectedCell) {
+                            const selectedText = selectedCell.textContent.trim();
+                            if (selectedText) {
+                                navigator.clipboard.writeText(selectedText).then(() => {
+                                    // Flash the cell to indicate copy
+                                    selectedCell.style.backgroundColor = 'rgba(26, 115, 232, 0.2)';
+                                    setTimeout(() => {
+                                        selectedCell.style.backgroundColor = '';
+                                    }, 200);
+                                }).catch(err => {
+                                    console.error('Failed to copy text:', err);
+                                });
+                            }
+                        }
+                    }
                 });
             </script>
         </body>

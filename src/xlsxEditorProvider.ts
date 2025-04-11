@@ -231,8 +231,8 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         opacity: 1;
         visibility: visible;
     }
-    body.alt-bg { background-color: black; }
-    .alt-bg td[data-default-bg="true"] { background-color: black; }
+    body.alt-bg { background-color: rgb(33, 33, 33); }
+    .alt-bg td[data-default-bg="true"] { background-color: rgb(33, 33, 33) !important; }
     .button-container { margin-bottom: 10px; display: flex; gap: 10px; position: sticky; top: 0; background-color: inherit; z-index: 1; }
     .toggle-button { max-height: 42px; padding: 8px; font-size: 14px; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; background-color: #2196f3; color: white; transition: all 0.2s ease; }
     .toggle-button:hover { background-color: #1976d2; }

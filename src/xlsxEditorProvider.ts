@@ -325,7 +325,32 @@ toggleMinWidthButton.addEventListener('click', () => {
     if (table) {
         minWidthState = (minWidthState + 1) % 3;
         table.style.minWidth = minWidthValues[minWidthState];
+        
+        // Store the tooltip element and force hide it
+        const tooltip = toggleMinWidthButton.querySelector('.tooltiptext');
+        const tooltipContent = tooltip.innerHTML;
+        tooltip.style.opacity = '0';
+        tooltip.style.visibility = 'hidden';
+        
+        // Update button content while preserving tooltip
         toggleMinWidthButton.innerHTML = buttonLabels[minWidthState];
+        
+        // Recreate and reattach the tooltip, maintaining the hidden state
+        const newTooltip = document.createElement('span');
+        newTooltip.className = 'tooltiptext';
+        newTooltip.style.opacity = '0';
+        newTooltip.style.visibility = 'hidden';
+        newTooltip.innerHTML = tooltipContent;
+        toggleMinWidthButton.appendChild(newTooltip);
+    }
+});
+
+// Reset tooltip visibility on mouseenter
+toggleMinWidthButton.addEventListener('mouseenter', () => {
+    const tooltip = toggleMinWidthButton.querySelector('.tooltiptext');
+    if (tooltip) {
+        tooltip.style.removeProperty('opacity');
+        tooltip.style.removeProperty('visibility');
     }
 });
 </script>

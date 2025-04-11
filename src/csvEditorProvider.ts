@@ -276,6 +276,31 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     border: 1px solid white;
                 }
 
+                /* Row and Column selection styles */
+                td.column-selected, th.column-selected {
+                    background-color: rgba(26, 115, 232, 0.1) !important;
+                }
+
+                td.row-selected, th.row-selected {
+                    background-color: rgba(26, 115, 232, 0.1) !important;
+                }
+
+                /* Dark mode for row and column selection */
+                body.alt-bg td.column-selected,
+                body.alt-bg th.column-selected,
+                body.alt-bg td.row-selected,
+                body.alt-bg th.row-selected {
+                    background-color: rgba(189, 200, 215, 0.2) !important;
+                }
+
+                th.col-header, th.row-header {
+                    cursor: pointer;
+                    user-select: none;
+                }
+
+                th.col-header:hover, th.row-header:hover {
+                    background-color: rgba(26, 115, 232, 0.2);
+                }
             </style>
         </head>
         <body>
@@ -354,39 +379,79 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     });
                 });
 
-                // Single click handler for cell selection
-                document.addEventListener('click', (event) => {
-                    const cell = event.target.closest('td');
+                // Handle header clicks for row and column selection
+                document.addEventListener('click', function(event) {
+                    const target = event.target;
                     
-                    // Remove previous selection
-                    document.querySelectorAll('td.selected').forEach(td => {
-                        td.classList.remove('selected');
+                    // Remove all previous selections
+                    document.querySelectorAll('td.selected, td.column-selected, td.row-selected, th.column-selected, th.row-selected').forEach(function(el) {
+                        el.classList.remove('selected', 'column-selected', 'row-selected');
                     });
 
-                    if (cell && !cell.closest('th')) {
-                        // Add selection styling without selecting text
-                        cell.classList.add('selected');
+                    if (target.classList.contains('col-header')) {
+                        // Column header clicked
+                        const columnIndex = target.cellIndex;
+                        const table = document.getElementById('csv-table');
+                        
+                        // Select all cells in the column
+                        const cells = table.querySelectorAll('tr > *:nth-child(' + (columnIndex + 1) + ')');
+                        cells.forEach(function(cell) {
+                            cell.classList.add('column-selected');
+                        });
+                    } else if (target.classList.contains('row-header')) {
+                        // Row header clicked
+                        const row = target.parentElement;
+                        if (row) {
+                            // Select all cells in the row
+                            row.querySelectorAll('td, th').forEach(function(cell) {
+                                cell.classList.add('row-selected');
+                            });
+                        }
+                    } else {
+                        // Regular cell click handling
+                        const cell = target.closest('td');
+                        if (cell && !cell.closest('th')) {
+                            cell.classList.add('selected');
+                        }
                     }
                 });
 
-                // Single keydown handler for copy
-                document.addEventListener('keydown', (event) => {
+                // Update copy functionality to handle row and column selection
+                document.addEventListener('keydown', function(event) {
                     if (event.ctrlKey && event.key === 'c') {
                         const selectedCell = document.querySelector('td.selected');
-                        if (selectedCell) {
+                        const selectedColumn = document.querySelectorAll('td.column-selected');
+                        const selectedRow = document.querySelectorAll('td.row-selected');
+
+                        if (selectedColumn.length > 0) {
+                            // Copy column
+                            const columnText = Array.from(selectedColumn)
+                                .map(function(cell) { return cell.textContent.trim(); })
+                                .join('\\n');
+                            navigator.clipboard.writeText(columnText);
+                        } else if (selectedRow.length > 0) {
+                            // Copy row
+                            const rowText = Array.from(selectedRow)
+                                .map(function(cell) { return cell.textContent.trim(); })
+                                .join('\\t');
+                            navigator.clipboard.writeText(rowText);
+                        } else if (selectedCell) {
+                            // Copy single cell
                             const selectedText = selectedCell.textContent.trim();
                             if (selectedText) {
-                                navigator.clipboard.writeText(selectedText).then(() => {
-                                    // Flash the cell to indicate copy
-                                    selectedCell.style.backgroundColor = 'rgba(26, 115, 232, 0.2)';
-                                    setTimeout(() => {
-                                        selectedCell.style.backgroundColor = '';
-                                    }, 200);
-                                }).catch(err => {
-                                    console.error('Failed to copy text:', err);
-                                });
+                                navigator.clipboard.writeText(selectedText);
                             }
                         }
+
+                        // Visual feedback for copy
+                        const selectedElements = document.querySelectorAll('td.selected, td.column-selected, td.row-selected');
+                        selectedElements.forEach(function(el) {
+                            const originalBg = el.style.backgroundColor;
+                            el.style.backgroundColor = 'rgba(26, 115, 232, 0.2)';
+                            setTimeout(function() {
+                                el.style.backgroundColor = originalBg;
+                            }, 200);
+                        });
                     }
                 });
             </script>

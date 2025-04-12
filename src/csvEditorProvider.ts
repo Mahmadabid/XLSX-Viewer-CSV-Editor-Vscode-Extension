@@ -249,20 +249,17 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     -moz-user-select: none;
                     -ms-user-select: none;
                 }
-                
-                td.selected {
-                    border: 2px solid #1a73e8;
-                    padding: 3px 7px;
-                }
 
                 /* Light mode selected cell */
                 td.selected {
+                    border: 2px solid rgb(119, 176, 255) !important;
                     background-color: rgba(26, 115, 232, 0.1) !important;
                 }
 
                 /* Dark mode selected cell */
                 body.alt-bg td.selected {
-                    background-color: rgba(189, 200, 215, 0.2) !important;
+                    background-color: rgba(255, 255, 255, 0.34) !important;
+                    border: 2px solid rgb(119, 176, 255) !important;                
                 }
                 
                 td.selected::after {
@@ -292,8 +289,8 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 body.alt-bg th.column-selected,
                 body.alt-bg td.row-selected,
                 body.alt-bg th.row-selected {
-                    background-color: rgba(167, 188, 216, 0.2) !important;
-                    border: 2px solid rgb(189, 200, 215) !important;
+                    background-color: rgba(255, 255, 255, 0.34) !important;
+                    border: 2px solid rgb(119, 176, 255) !important;
                 }
 
                 th.col-header, th.row-header {

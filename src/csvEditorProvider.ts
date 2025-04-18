@@ -18,25 +18,27 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
         token: vscode.CancellationToken
     ): Promise<void> {
         try {
-            const csvContent = fs.readFileSync(document.uri.fsPath, 'utf-8');
-            const rows = csvContent.split('\n').map(row => row.split(','));
+            const BATCH_SIZE = 1000;
+            const filePath = document.uri.fsPath;
+            const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' });
+            let leftover = '';
+            let rows: string[][] = [];
+            let rowCount = 0;
+            let columnCount = 0;
+            let isFirstBatch = true;
+            let isDone = false;
 
-            const generateTableHtml = () => {
-                let tableHtml = '<table id="csv-table" border="1" cellspacing="0" cellpadding="5">';
+            // Helper to parse CSV chunk
+            function parseChunk(chunk: string): string[][] {
+                const lines = chunk.split('\n');
+                return lines.map(row => row.split(','));
+            }
 
-                // Add column headers (alphabets)
-                tableHtml += '<thead><tr><th class="row-header">&nbsp;</th>';
-                const columnCount = rows[0]?.length || 0;
-                for (let colNumber = 1; colNumber <= columnCount; colNumber++) {
-                    const colLabel = String.fromCharCode(64 + colNumber); // Convert to A, B, C, etc.
-                    tableHtml += `<th class="col-header">${colLabel}</th>`;
-                }
-                tableHtml += '</tr></thead>';
-
-                // Add rows with row headers (numbers)
-                tableHtml += '<tbody>';
-                rows.forEach((row, rowIndex) => {
-                    tableHtml += `<tr><th class="row-header">${rowIndex + 1}</th>`;
+            // Helper to generate table HTML for a batch
+            function generateTableRowsHtml(batchRows: string[][], startIndex: number): string {
+                let html = '';
+                batchRows.forEach((row, rowIndex) => {
+                    html += `<tr><th class="row-header">${startIndex + rowIndex + 1}</th>`;
                     row.forEach(cell => {
                         const cellContent = cell.trim();
                         const isEmpty = cellContent === '';
@@ -45,23 +47,45 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             'data-default-color="true"',
                             isEmpty ? 'data-empty="true"' : ''
                         ].filter(Boolean).join(' ');
-
-                        tableHtml += `<td ${dataAttrs}><span class="cell-content">${isEmpty ? '&nbsp;' : cellContent}</span></td>`;
+                        html += `<td ${dataAttrs}><span class="cell-content">${isEmpty ? '&nbsp;' : cellContent}</span></td>`;
                     });
-                    tableHtml += '</tr>';
+                    html += '</tr>';
                 });
-                tableHtml += '</tbody></table>';
-                return tableHtml;
-            };
+                return html;
+            }
 
+            // Helper to generate table header
+            function generateTableHeaderHtml(colCount: number): string {
+                let html = '<thead><tr><th class="row-header">&nbsp;</th>';
+                for (let colNumber = 1; colNumber <= colCount; colNumber++) {
+                    const colLabel = String.fromCharCode(64 + colNumber);
+                    html += `<th class="col-header">${colLabel}</th>`;
+                }
+                html += '</tr></thead>';
+                return html;
+            }
+
+            // Set up webview
             webviewPanel.webview.options = { enableScripts: true };
-            webviewPanel.webview.html = this.getWebviewContent(generateTableHtml(), webviewPanel);
+            // Initial empty table
+            webviewPanel.webview.html = this.getWebviewContent(
+                `<table id="csv-table" border="1" cellspacing="0" cellpadding="5">
+                    <thead></thead><tbody></tbody>
+                </table>`,
+                webviewPanel
+            );
 
+            // Listen for messages (keep existing logic)
             webviewPanel.webview.onDidReceiveMessage(async message => {
                 if (message.command === 'toggleView') {
                     const isTableView = message.isTableView;
                     if (isTableView) {
-                        webviewPanel.webview.html = this.getWebviewContent(generateTableHtml(), webviewPanel);
+                        webviewPanel.webview.html = this.getWebviewContent(
+                            `<table id="csv-table" border="1" cellspacing="0" cellpadding="5">
+                                <thead></thead><tbody></tbody>
+                            </table>`,
+                            webviewPanel
+                        );
                     } else {
                         // Open in default editor
                         await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default');
@@ -71,6 +95,58 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 } else if (message.command === 'toggleBackground') {
                     webviewPanel.webview.postMessage({ command: 'toggleBackground' });
                 }
+            });
+
+            // Read file in batches
+            fileStream.on('data', chunk => {
+                let data = leftover + chunk;
+                let lines = data.split('\n');
+                leftover = lines.pop() || '';
+                for (let line of lines) {
+                    rows.push(line.split(','));
+                    if (rows.length === 1) {
+                        columnCount = rows[0].length;
+                    }
+                    rowCount++;
+                    if (rowCount % BATCH_SIZE === 0) {
+                        // Send batch to webview
+                        if (isFirstBatch) {
+                            // Send header and first batch
+                            webviewPanel.webview.postMessage({
+                                command: 'initTable',
+                                headerHtml: generateTableHeaderHtml(columnCount),
+                                rowsHtml: generateTableRowsHtml(rows, 0)
+                            });
+                            isFirstBatch = false;
+                        } else {
+                            webviewPanel.webview.postMessage({
+                                command: 'appendRows',
+                                rowsHtml: generateTableRowsHtml(rows, rowCount - rows.length)
+                            });
+                        }
+                        rows = [];
+                    }
+                }
+            });
+            fileStream.on('end', () => {
+                if (leftover) {
+                    rows.push(leftover.split(','));
+                }
+                if (rows.length > 0) {
+                    if (isFirstBatch) {
+                        webviewPanel.webview.postMessage({
+                            command: 'initTable',
+                            headerHtml: generateTableHeaderHtml(columnCount),
+                            rowsHtml: generateTableRowsHtml(rows, 0)
+                        });
+                    } else {
+                        webviewPanel.webview.postMessage({
+                            command: 'appendRows',
+                            rowsHtml: generateTableRowsHtml(rows, rowCount - rows.length)
+                        });
+                    }
+                }
+                isDone = true;
             });
         } catch (error) {
             vscode.window.showErrorMessage(`Error reading CSV file: ${error}`);
@@ -341,6 +417,19 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
             <script>
                 const vscode = acquireVsCodeApi();
                 let isTableView = true;
+
+                // Table batch loading logic
+                window.addEventListener('message', event => {
+                    const message = event.data;
+                    if (message.command === 'initTable') {
+                        const table = document.getElementById('csv-table');
+                        table.querySelector('thead').innerHTML = message.headerHtml;
+                        table.querySelector('tbody').innerHTML = message.rowsHtml;
+                    } else if (message.command === 'appendRows') {
+                        const table = document.getElementById('csv-table');
+                        table.querySelector('tbody').insertAdjacentHTML('beforeend', message.rowsHtml);
+                    }
+                });
 
                 document.getElementById('toggleViewButton').addEventListener('click', () => {
                     isTableView = !isTableView;

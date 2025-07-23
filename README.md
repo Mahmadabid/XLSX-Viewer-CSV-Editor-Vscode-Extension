@@ -18,6 +18,11 @@ XLSX Viewer & CSV Editor is a powerful **Visual Studio Code** extension that all
 ✅ **Interactive Table View** - Display spreadsheet data in a structured HTML table\
 ✅ **Color Detection & Conversion** - Converts ARGB Excel colors into CSS-compatible formats
 
+### 🆕 Excel-like Multi-Selection & Copy (v1.4.0)
+✅ **Multi-Selection for Rows/Columns** - Hold <kbd>Ctrl</kbd> to select/deselect multiple rows or columns, <kbd>Shift</kbd> to select a range\
+✅ **Excel/Google Sheets Compatible Copy** - Copying and pasting preserves cell structure in Excel/Google Sheets\
+✅ **Improved Selection Management** - Visual feedback for multi-row/column selection and selection size info box in the bottom right corner.
+
 ### CSV Editing
 ✅ **Table View** - Edit CSV files in a structured table format\
 ✅ **Toggle View** - Switch between table and raw text views\

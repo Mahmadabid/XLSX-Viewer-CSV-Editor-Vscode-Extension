@@ -28,24 +28,20 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
             let isFirstBatch = true;
             let isDone = false;
 
-            // Helper to parse CSV chunk
-            function parseChunk(chunk: string): string[][] {
-                const lines = chunk.split('\n');
-                return lines.map(row => row.split(','));
-            }
-
             // Helper to generate table HTML for a batch
             function generateTableRowsHtml(batchRows: string[][], startIndex: number): string {
                 let html = '';
                 batchRows.forEach((row, rowIndex) => {
-                    html += `<tr><th class="row-header">${startIndex + rowIndex + 1}</th>`;
-                    row.forEach(cell => {
+                    html += `<tr><th class="row-header" data-row="${startIndex + rowIndex}">${startIndex + rowIndex + 1}</th>`;
+                    row.forEach((cell, colIndex) => {
                         const cellContent = cell.trim();
                         const isEmpty = cellContent === '';
                         const dataAttrs = [
                             'data-default-bg="true"',
                             'data-default-color="true"',
-                            isEmpty ? 'data-empty="true"' : ''
+                            isEmpty ? 'data-empty="true"' : '',
+                            `data-row="${startIndex + rowIndex}"`,
+                            `data-col="${colIndex}"`
                         ].filter(Boolean).join(' ');
                         html += `<td ${dataAttrs}><span class="cell-content">${isEmpty ? '&nbsp;' : cellContent}</span></td>`;
                     });
@@ -59,7 +55,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 let html = '<thead><tr><th class="row-header">&nbsp;</th>';
                 for (let colNumber = 1; colNumber <= colCount; colNumber++) {
                     const colLabel = String.fromCharCode(64 + colNumber);
-                    html += `<th class="col-header">${colLabel}</th>`;
+                    html += `<th class="col-header" data-col="${colNumber - 1}">${colLabel}</th>`;
                 }
                 html += '</tr></thead>';
                 return html;
@@ -67,7 +63,6 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
             // Set up webview
             webviewPanel.webview.options = { enableScripts: true };
-            // Initial empty table
             webviewPanel.webview.html = this.getWebviewContent(
                 `<table id="csv-table" border="1" cellspacing="0" cellpadding="5">
                     <thead></thead><tbody></tbody>
@@ -75,7 +70,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 webviewPanel
             );
 
-            // Listen for messages (keep existing logic)
+            // Listen for messages
             webviewPanel.webview.onDidReceiveMessage(async message => {
                 if (message.command === 'toggleView') {
                     const isTableView = message.isTableView;
@@ -87,9 +82,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             webviewPanel
                         );
                     } else {
-                        // Open in default editor
                         await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default');
-                        // Hide the current webview panel
                         webviewPanel.dispose();
                     }
                 } else if (message.command === 'toggleBackground') {
@@ -109,9 +102,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     }
                     rowCount++;
                     if (rowCount % BATCH_SIZE === 0) {
-                        // Send batch to webview
                         if (isFirstBatch) {
-                            // Send header and first batch
                             webviewPanel.webview.postMessage({
                                 command: 'initTable',
                                 headerHtml: generateTableHeaderHtml(columnCount),
@@ -128,6 +119,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     }
                 }
             });
+
             fileStream.on('end', () => {
                 if (leftover) {
                     rows.push(leftover.split(','));
@@ -172,28 +164,27 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     margin: 0;
                     overflow-x: auto;
                 }
-                .table-container {
-                    width: 100%;
-                    overflow-x: auto;
-                }
                 table { 
                     border-collapse: collapse; 
                     width: auto;
                     min-width: 100%;
                     table-layout: fixed;
-                    user-select: text;
-                    -webkit-user-select: text;
-                    -moz-user-select: text;
-                    -ms-user-select: text;
+                    user-select: none;
+                    -webkit-user-select: none;
+                    -moz-user-select: none;
+                    -ms-user-select: none;
                 }
                 th, td { 
                     border: 1px solid #ccc; 
                     padding: 8px; 
                     text-align: left;
                     white-space: nowrap;
+                    position: relative;
+                    cursor: cell;
+                    min-width: 80px;
                 }
-                    body.alt-bg th.col-header, body.alt-bg th.row-header { background-color: rgb(69, 69, 69); color: #fff; border-color: #ccc; }
-                    .button-container {
+                
+                .button-container {
                     margin-bottom: 10px;
                     display: flex;
                     gap: 10px;
@@ -202,13 +193,19 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     background-color: inherit;
                     z-index: 1;
                 }
+                
                 th {
                     background-color: rgb(247, 247, 247);
+                    font-weight: bold;
                 }
+                
                 td:nth-child(1), th:nth-child(1) {
-                    width: 20px !important;
+                    width: 50px !important;
+                    min-width: 50px !important;
                     background-color: rgb(247, 247, 247);
+                    text-align: center;
                 }
+                
                 .toggle-button {
                     max-height: 42px;
                     padding: 8px 16px;
@@ -224,51 +221,44 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     color: white;
                     transition: all 0.2s ease;
                 }
+                
                 .toggle-button:hover {
                     background-color: #1976d2;
                 }
-                .toggle-button:active {
-                    background-color: #1565c0;
-                }
+                
                 .toggle-button svg {
                     width: 20px;
                     height: 20px;
                     stroke: white;
                 }
-                /* Default background */
+                
                 td { 
                     background-color: rgb(255, 255, 255);
                     color: rgb(0, 0, 0);
-                    cursor: text;
-                    user-select: text;
-                    -webkit-user-select: text;
-                    -moz-user-select: text;
-                    -ms-user-select: text;
-                    position: relative;
-                    padding: 0;
-                    border: 1px solid #ccc;
+                    padding: 4px 8px;
+                    border: 1px solid #e2e3e3;
                 }
+                
                 td span.cell-content {
-                    padding: 8px;
                     display: block;
+                    user-select: none;
+                    pointer-events: none;
                 }
-                .cell-content {
-                    display: block;
-                    width: 100%;
-                    height: 100%;
-                    user-select: text;
-                    -webkit-user-select: text;
-                    -moz-user-select: text;
-                    -ms-user-select: text;
+                
+                body.alt-bg { 
+                    background-color: rgb(33, 33, 33); 
                 }
-                /* Alternate background when toggled */
-                body.alt-bg { background-color: rgb(33, 33, 33); }
+                
                 body.alt-bg td { 
                     background-color: rgb(33, 33, 33) !important;
                     color: rgb(255, 255, 255);
                 }
-                /* Empty cell border styles */
-                td:empty { border-color: rgba(204, 204, 204, 1); }
+                
+                body.alt-bg th.col-header, 
+                body.alt-bg th.row-header { 
+                    background-color: rgb(69, 69, 69); 
+                    color: #fff; 
+                }
 
                 .tooltip {
                     position: relative;
@@ -313,32 +303,30 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     font-weight: normal;
                 }
 
-                /* Styles for cell selection like Google Sheets */
-                td {
-                    position: relative;
-                    padding: 4px 8px;
-                    border: 1px solid #e2e3e3;
-                    min-width: 80px;
-                    outline: none;
-                    user-select: none;
-                    -webkit-user-select: none;
-                    -moz-user-select: none;
-                    -ms-user-select: none;
-                }
-
-                /* Light mode selected cell */
+                /* Cell selection styles */
                 td.selected {
-                    border: 2px solid rgb(119, 176, 255) !important;
+                    border: 2px solid rgb(26, 115, 232) !important;
                     background-color: rgba(26, 115, 232, 0.1) !important;
+                    z-index: 2;
                 }
 
-                /* Dark mode selected cell */
                 body.alt-bg td.selected {
-                    background-color: rgba(255, 255, 255, 0.34) !important;
-                    border: 2px solid rgb(119, 176, 255) !important;                
+                    background-color: rgba(138, 180, 248, 0.24) !important;
+                    border: 2px solid rgb(138, 180, 248) !important;                
                 }
                 
-                td.selected::after {
+                td.active-cell {
+                    border: 2px solid rgb(26, 115, 232) !important;
+                    background-color: white !important;
+                    z-index: 3;
+                }
+
+                body.alt-bg td.active-cell {
+                    background-color: rgb(33, 33, 33) !important;
+                    border: 2px solid rgb(138, 180, 248) !important;
+                }
+
+                td.active-cell::after {
                     content: '';
                     position: absolute;
                     right: -2px;
@@ -352,21 +340,21 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 /* Row and Column selection styles */
                 td.column-selected, th.column-selected {
                     background-color: rgba(26, 115, 232, 0.1) !important;
-                    border: 2px solid rgb(192, 219, 255) !important;
+                    border-left: 2px solid rgb(26, 115, 232) !important;
+                    border-right: 2px solid rgb(26, 115, 232) !important;
                 }
 
                 td.row-selected, th.row-selected {
                     background-color: rgba(26, 115, 232, 0.1) !important;
-                    border: 2px solid rgb(192, 219, 255) !important;
+                    border-top: 2px solid rgb(26, 115, 232) !important;
+                    border-bottom: 2px solid rgb(26, 115, 232) !important;
                 }
 
-                /* Dark mode for row and column selection */
                 body.alt-bg td.column-selected,
                 body.alt-bg th.column-selected,
                 body.alt-bg td.row-selected,
                 body.alt-bg th.row-selected {
-                    background-color: rgba(255, 255, 255, 0.34) !important;
-                    border: 2px solid rgb(119, 176, 255) !important;
+                    background-color: rgba(138, 180, 248, 0.24) !important;
                 }
 
                 th.col-header, th.row-header {
@@ -377,11 +365,66 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 th.col-header:hover, th.row-header:hover {
                     background-color: rgba(26, 115, 232, 0.2);
                 }
+
+                /* Copy animation */
+                td.copying {
+                    animation: copyFlash 0.2s ease-in-out;
+                }
+
+                @keyframes copyFlash {
+                    0% { background-color: inherit; }
+                    50% { background-color: rgba(26, 115, 232, 0.3) !important; }
+                    100% { background-color: inherit; }
+                }
+
+                body.alt-bg td.copying {
+                    animation: copyFlashDark 0.2s ease-in-out;
+                }
+
+                @keyframes copyFlashDark {
+                    0% { background-color: inherit; }
+                    50% { background-color: rgba(138, 180, 248, 0.3) !important; }
+                    100% { background-color: inherit; }
+                }
+
+                ::selection {
+                    background-color: transparent;
+                }
+                
+                ::-moz-selection {
+                    background-color: transparent;
+                }
+
+                td:hover {
+                    background-color: rgba(0, 0, 0, 0.05) !important;
+                }
+
+                body.alt-bg td:hover {
+                    background-color: rgba(255, 255, 255, 0.1) !important;
+                }
+
+                .selection-info {
+                    position: fixed;
+                    bottom: 10px;
+                    right: 10px;
+                    background: rgba(0, 0, 0, 0.8);
+                    color: white;
+                    padding: 5px 10px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    display: none;
+                    z-index: 1001;
+                }
+
+                body.alt-bg .selection-info {
+                    background: rgba(255, 255, 255, 0.8);
+                    color: black;
+                                    }
             </style>
         </head>
         <body>
             <div class="button-container">
-                <button id="toggleViewButton" class="toggle-button" tilte="Edit File in Vscode Default Editor">
+                <button id="toggleViewButton" class="toggle-button" title="Edit File in Vscode Default Editor">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 20h9" />
                         <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
@@ -404,30 +447,41 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                         <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
                     </svg>
                 </button>
-                <div class = "tooltip">
+                <div class="tooltip">
                     <img src="${imgUri}" alt="Change to table view"  style="width: auto; height: 32px; margin-left: auto; margin-top: 2px;" />
                     <span class="tooltiptext">
                         <span class="warning">Important:</span> Click the blue table icon <img src="${svgUri}" alt="Table Icon" style="width: 16px; vertical-align: middle; height: 16px;" />
                          to switch to table view from edit file mode. <br>
-                        <span class = "instruction">The table icon will only work on edit file mode and is located on the top right corner in the editor toolbar as shown in the image.</span>
+                        <span class="instruction">The table icon will only work on edit file mode and is located on the top right corner in the editor toolbar as shown in the image.</span>
                     </span>
                 </div>
             </div>
             <div id="content">${tableHtml}</div>
+            <div class="selection-info" id="selectionInfo"></div>
             <script>
                 const vscode = acquireVsCodeApi();
                 let isTableView = true;
+                let isSelecting = false;
+                let startCell = null;
+                let endCell = null;
+                let selectedCells = new Set();
+                let activeCell = null;
+                let selectedRows = new Set();
+                let selectedColumns = new Set();
+                let lastSelectedRow = null;
+                let lastSelectedColumn = null;
 
-                // Table batch loading logic
                 window.addEventListener('message', event => {
                     const message = event.data;
                     if (message.command === 'initTable') {
                         const table = document.getElementById('csv-table');
                         table.querySelector('thead').innerHTML = message.headerHtml;
                         table.querySelector('tbody').innerHTML = message.rowsHtml;
+                        initializeSelection();
                     } else if (message.command === 'appendRows') {
                         const table = document.getElementById('csv-table');
                         table.querySelector('tbody').insertAdjacentHTML('beforeend', message.rowsHtml);
+                        initializeSelection();
                     }
                 });
 
@@ -440,7 +494,6 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     document.body.classList.toggle('alt-bg');
                     const isDarkMode = document.body.classList.contains('alt-bg');
 
-                    // Toggle icons
                     if (isDarkMode) {
                         document.getElementById('lightIcon').style.display = 'block';
                         document.getElementById('darkIcon').style.display = 'none';
@@ -452,7 +505,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     const defaultBgCells = document.querySelectorAll('td[data-default-bg="true"]');
                     defaultBgCells.forEach(cell => {
                         if (isDarkMode) {
-                            cell.style.backgroundColor = "rgb(0, 0, 0)";
+                            cell.style.backgroundColor = "rgb(33, 33, 33)";
                         } else {
                             cell.style.backgroundColor = "rgb(255, 255, 255)";
                         }
@@ -468,81 +521,626 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     });
                 });
 
-                // Handle header clicks for row and column selection
-                document.addEventListener('click', function(event) {
-                    const target = event.target;
+                function getCellCoordinates(cell) {
+                    if (!cell || !cell.dataset) return null;
+                    return {
+                        row: parseInt(cell.dataset.row),
+                        col: parseInt(cell.dataset.col)
+                    };
+                }
+
+                function clearSelection() {
+                    document.querySelectorAll('td.selected, td.active-cell, td.column-selected, td.row-selected, th.column-selected, th.row-selected').forEach(el => {
+                        el.classList.remove('selected', 'active-cell', 'column-selected', 'row-selected', 'copying');
+                    });
+                    selectedCells.clear();
+                    selectedRows.clear();
+                    selectedColumns.clear();
+                    activeCell = null;
+                    lastSelectedRow = null;
+                    lastSelectedColumn = null;
+                    document.getElementById('selectionInfo').style.display = 'none';
+                }
+
+                function selectCellsInRange(start, end) {
+                    // Clear cell selections but keep row/column selections
+                    document.querySelectorAll('td.selected, td.active-cell').forEach(el => {
+                        el.classList.remove('selected', 'active-cell');
+                    });
+                    selectedCells.clear();
                     
-                    // Remove all previous selections
-                    document.querySelectorAll('td.selected, td.column-selected, td.row-selected, th.column-selected, th.row-selected').forEach(function(el) {
-                        el.classList.remove('selected', 'column-selected', 'row-selected');
+                    const minRow = Math.min(start.row, end.row);
+                    const maxRow = Math.max(start.row, end.row);
+                    const minCol = Math.min(start.col, end.col);
+                    const maxCol = Math.max(start.col, end.col);
+
+                    const cells = document.querySelectorAll('td[data-row][data-col]');
+                    let count = 0;
+
+                    cells.forEach(cell => {
+                        const coords = getCellCoordinates(cell);
+                        if (coords && coords.row >= minRow && coords.row <= maxRow && 
+                            coords.col >= minCol && coords.col <= maxCol) {
+                            cell.classList.add('selected');
+                            selectedCells.add(cell);
+                            count++;
+                        }
                     });
 
-                    if (target.classList.contains('col-header')) {
-                        // Column header clicked
-                        const columnIndex = target.cellIndex;
-                        const table = document.getElementById('csv-table');
-                        
-                        // Select all cells in the column
-                        const cells = table.querySelectorAll('tr > *:nth-child(' + (columnIndex + 1) + ')');
-                        cells.forEach(function(cell) {
-                            cell.classList.add('column-selected');
-                        });
-                    } else if (target.classList.contains('row-header')) {
-                        // Row header clicked
-                        const row = target.parentElement;
-                        if (row) {
-                            // Select all cells in the row
-                            row.querySelectorAll('td, th').forEach(function(cell) {
-                                cell.classList.add('row-selected');
+                    const startCellElement = document.querySelector('td[data-row="' + start.row + '"][data-col="' + start.col + '"]');
+                    if (startCellElement) {
+                        startCellElement.classList.add('active-cell');
+                        activeCell = startCellElement;
+                    }
+
+                    if (count > 1) {
+                        const rows = maxRow - minRow + 1;
+                        const cols = maxCol - minCol + 1;
+                        document.getElementById('selectionInfo').textContent = rows + 'R × ' + cols + 'C';
+                        document.getElementById('selectionInfo').style.display = 'block';
+                    }
+                }
+
+                function selectColumn(columnIndex, ctrlKey, shiftKey) {
+                    if (!ctrlKey && !shiftKey) {
+                        clearSelection();
+                    }
+
+                    if (shiftKey && lastSelectedColumn !== null) {
+                        if (!ctrlKey) {
+                            clearSelection();
+                        }
+                        const minCol = Math.min(lastSelectedColumn, columnIndex);
+                        const maxCol = Math.max(lastSelectedColumn, columnIndex);
+                        for (let col = minCol; col <= maxCol; col++) {
+                            selectedColumns.add(col);
+                            const cells = document.querySelectorAll('td[data-col="' + col + '"], th[data-col="' + col + '"]');
+                            cells.forEach(cell => {
+                                cell.classList.add('column-selected');
+                                if (cell.tagName === 'TD') selectedCells.add(cell);
                             });
                         }
                     } else {
-                        // Regular cell click handling
-                        const cell = target.closest('td');
-                        if (cell && !cell.closest('th')) {
-                            cell.classList.add('selected');
+                        if (ctrlKey && selectedColumns.has(columnIndex)) {
+                            selectedColumns.delete(columnIndex);
+                            const cells = document.querySelectorAll('td[data-col="' + columnIndex + '"], th[data-col="' + columnIndex + '"]');
+                            cells.forEach(cell => {
+                                cell.classList.remove('column-selected');
+                                if (cell.tagName === 'TD') selectedCells.delete(cell);
+                            });
+                        } else {
+                            selectedColumns.add(columnIndex);
+                            const cells = document.querySelectorAll('td[data-col="' + columnIndex + '"], th[data-col="' + columnIndex + '"]');
+                            cells.forEach(cell => {
+                                cell.classList.add('column-selected');
+                                if (cell.tagName === 'TD') selectedCells.add(cell);
+                            });
                         }
+                        lastSelectedColumn = columnIndex;
                     }
-                });
+                    updateSelectionInfo();
+                }
 
-                // Update copy functionality to handle row and column selection
-                document.addEventListener('keydown', function(event) {
-                    if (event.ctrlKey && event.key === 'c') {
-                        const selectedCell = document.querySelector('td.selected');
-                        const selectedColumn = document.querySelectorAll('td.column-selected');
-                        const selectedRow = document.querySelectorAll('td.row-selected');
+                function selectRow(rowIndex, ctrlKey, shiftKey) {
+                    if (!ctrlKey && !shiftKey) {
+                        clearSelection();
+                    }
 
-                        if (selectedColumn.length > 0) {
-                            // Copy column
-                            const columnText = Array.from(selectedColumn)
-                                .map(function(cell) { return cell.textContent.trim(); })
-                                .join('\\n');
-                            navigator.clipboard.writeText(columnText);
-                        } else if (selectedRow.length > 0) {
-                            // Copy row
-                            const rowText = Array.from(selectedRow)
-                                .map(function(cell) { return cell.textContent.trim(); })
-                                .join('\\t');
-                            navigator.clipboard.writeText(rowText);
-                        } else if (selectedCell) {
-                            // Copy single cell
-                            const selectedText = selectedCell.textContent.trim();
-                            if (selectedText) {
-                                navigator.clipboard.writeText(selectedText);
+                    if (shiftKey && lastSelectedRow !== null) {
+                        if (!ctrlKey) {
+                            clearSelection();
+                        }
+                        const minRow = Math.min(lastSelectedRow, rowIndex);
+                        const maxRow = Math.max(lastSelectedRow, rowIndex);
+                        for (let row = minRow; row <= maxRow; row++) {
+                            selectedRows.add(row);
+                            const rowHeader = document.querySelector('th[data-row="' + row + '"]');
+                            if (rowHeader) {
+                                const rowElement = rowHeader.parentElement;
+                                const cells = rowElement.querySelectorAll('td, th');
+                                cells.forEach(cell => {
+                                    cell.classList.add('row-selected');
+                                    if (cell.tagName === 'TD') selectedCells.add(cell);
+                                });
                             }
                         }
+                    } else {
+                        if (ctrlKey && selectedRows.has(rowIndex)) {
+                            selectedRows.delete(rowIndex);
+                            const rowHeader = document.querySelector('th[data-row="' + rowIndex + '"]');
+                            if (rowHeader) {
+                                const rowElement = rowHeader.parentElement;
+                                const cells = rowElement.querySelectorAll('td, th');
+                                cells.forEach(cell => {
+                                    cell.classList.remove('row-selected');
+                                    if (cell.tagName === 'TD') selectedCells.delete(cell);
+                                });
+                            }
+                        } else {
+                            selectedRows.add(rowIndex);
+                            const rowHeader = document.querySelector('th[data-row="' + rowIndex + '"]');
+                            if (rowHeader) {
+                                const rowElement = rowHeader.parentElement;
+                                const cells = rowElement.querySelectorAll('td, th');
+                                cells.forEach(cell => {
+                                    cell.classList.add('row-selected');
+                                    if (cell.tagName === 'TD') selectedCells.add(cell);
+                                });
+                            }
+                        }
+                        lastSelectedRow = rowIndex;
+                    }
+                    updateSelectionInfo();
+                }
 
-                        // Visual feedback for copy
-                        const selectedElements = document.querySelectorAll('td.selected, td.column-selected, td.row-selected');
-                        selectedElements.forEach(function(el) {
-                            const originalBg = el.style.backgroundColor;
-                            el.style.backgroundColor = 'rgba(26, 115, 232, 0.2)';
-                            setTimeout(function() {
-                                el.style.backgroundColor = originalBg;
+                function updateSelectionInfo() {
+                    if (selectedCells.size > 1) {
+                        const cellsArray = Array.from(selectedCells);
+                        const rows = new Set(cellsArray.map(cell => parseInt(cell.dataset.row)));
+                        const cols = new Set(cellsArray.map(cell => parseInt(cell.dataset.col)));
+                        document.getElementById('selectionInfo').textContent = rows.size + 'R × ' + cols.size + 'C';
+                        document.getElementById('selectionInfo').style.display = 'block';
+                    } else {
+                        document.getElementById('selectionInfo').style.display = 'none';
+                    }
+                }
+
+                function copySelectionToClipboard() {
+                    if (selectedCells.size === 0) return;
+
+                    // Convert selected cells to array and sort by position
+                    const cellsArray = Array.from(selectedCells);
+                    const cellData = cellsArray.map(cell => ({
+                        row: parseInt(cell.dataset.row),
+                        col: parseInt(cell.dataset.col),
+                        text: cell.textContent.trim()
+                    }));
+
+                    // Sort by row then column
+                    cellData.sort((a, b) => a.row - b.row || a.col - b.col);
+
+                    // Find bounds
+                    const minRow = Math.min(...cellData.map(c => c.row));
+                    const maxRow = Math.max(...cellData.map(c => c.row));
+                    const minCol = Math.min(...cellData.map(c => c.col));
+                    const maxCol = Math.max(...cellData.map(c => c.col));
+
+                    // Create a 2D array to represent the selection
+                    const grid = [];
+                    for (let r = minRow; r <= maxRow; r++) {
+                        const row = [];
+                        for (let c = minCol; c <= maxCol; c++) {
+                            const cellData = cellsArray.find(cell => 
+                                parseInt(cell.dataset.row) === r && parseInt(cell.dataset.col) === c
+                            );
+                            row.push(cellData ? cellData.textContent.trim() : '');
+                        }
+                        grid.push(row);
+                    }
+
+                    // Convert to tab-separated format
+                    const clipboardText = grid.map(row => row.join('\\t')).join('\\n');
+                    
+                    // Copy to clipboard
+                    navigator.clipboard.writeText(clipboardText).then(() => {
+                        // Visual feedback
+                        selectedCells.forEach(cell => {
+                            cell.classList.add('copying');
+                            setTimeout(() => {
+                                cell.classList.remove('copying');
                             }, 200);
                         });
+                    });
+                }
+
+                function initializeSelection() {
+    const table = document.getElementById('csv-table');
+    if (!table) return;
+
+    // Remove any existing event listeners first
+    const newTable = table.cloneNode(true);
+    table.parentNode.replaceChild(newTable, table);
+    const tableElement = document.getElementById('csv-table');
+
+    tableElement.addEventListener('selectstart', (e) => {
+        e.preventDefault();
+        return false;
+    });
+
+    tableElement.addEventListener('mousedown', (e) => {
+        const target = e.target.closest('td, th');
+        if (!target) return;
+
+        e.preventDefault(); // Prevent text selection
+
+        // Handle column header clicks
+        if (target.classList.contains('col-header')) {
+            const columnIndex = parseInt(target.dataset.col);
+            if (isNaN(columnIndex)) return;
+            
+            // Always update last selected column
+            if (!e.shiftKey) {
+                lastSelectedColumn = columnIndex;
+            }
+            
+            selectColumn(columnIndex, e.ctrlKey || e.metaKey, e.shiftKey);
+            return;
+        }
+
+        // Handle row header clicks
+        if (target.classList.contains('row-header')) {
+            const rowIndex = parseInt(target.dataset.row);
+            if (isNaN(rowIndex)) return;
+            
+            // Always update last selected row
+            if (!e.shiftKey) {
+                lastSelectedRow = rowIndex;
+            }
+            
+            selectRow(rowIndex, e.ctrlKey || e.metaKey, e.shiftKey);
+            return;
+        }
+
+        // Handle regular cell clicks
+        if (target.tagName === 'TD') {
+            const coords = getCellCoordinates(target);
+            if (!coords) return;
+
+            // Ctrl/Cmd + Click: Toggle individual cell
+            if (e.ctrlKey || e.metaKey) {
+                e.stopPropagation();
+                
+                // Don't clear other selections
+                if (target.classList.contains('selected')) {
+                    // Remove from selection
+                    target.classList.remove('selected');
+                    selectedCells.delete(target);
+                    
+                    if (target === activeCell) {
+                        target.classList.remove('active-cell');
+                        activeCell = null;
+                        
+                        // Find another selected cell to make active
+                        const remainingSelected = document.querySelector('td.selected');
+                        if (remainingSelected) {
+                            remainingSelected.classList.add('active-cell');
+                            activeCell = remainingSelected;
+                            startCell = getCellCoordinates(remainingSelected);
+                        }
                     }
+                } else {
+                    // Add to selection
+                    target.classList.add('selected');
+                    selectedCells.add(target);
+                    
+                    // Update active cell
+                    if (activeCell) {
+                        activeCell.classList.remove('active-cell');
+                    }
+                    target.classList.add('active-cell');
+                    activeCell = target;
+                    startCell = coords;
+                }
+                
+                updateSelectionInfo();
+                return;
+            }
+
+            // Shift + Click: Range selection
+            if (e.shiftKey && startCell) {
+                e.stopPropagation();
+                selectCellsInRange(startCell, coords);
+                updateSelectionInfo();
+                return;
+            }
+
+            // Normal click: Start new selection
+            clearSelection();
+            isSelecting = true;
+            startCell = coords;
+            endCell = coords;
+            target.classList.add('selected');
+            target.classList.add('active-cell');
+            selectedCells.add(target);
+            activeCell = target;
+            updateSelectionInfo();
+        }
+    });
+
+    tableElement.addEventListener('mousemove', (e) => {
+        if (!isSelecting || !startCell) return;
+
+        const target = e.target.closest('td');
+        if (!target) return;
+
+        const coords = getCellCoordinates(target);
+        if (!coords) return;
+
+        if (!endCell || coords.row !== endCell.row || coords.col !== endCell.col) {
+            endCell = coords;
+            selectCellsInRange(startCell, endCell);
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        isSelecting = false;
+    });
+
+    // Rest of the event listeners...
+    document.addEventListener('keydown', (e) => {
+        // Copy functionality
+        if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+            e.preventDefault();
+            copySelectionToClipboard();
+        }
+
+        // Select all
+        if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+            e.preventDefault();
+            const allCells = document.querySelectorAll('td[data-row][data-col]');
+            if (allCells.length > 0) {
+                clearSelection();
+                allCells.forEach(cell => {
+                    cell.classList.add('selected');
+                    selectedCells.add(cell);
                 });
+                
+                const firstCell = allCells[0];
+                if (firstCell) {
+                    firstCell.classList.add('active-cell');
+                    activeCell = firstCell;
+                    startCell = getCellCoordinates(firstCell);
+                }
+                
+                updateSelectionInfo();
+            }
+        }
+
+        // Arrow key navigation (keep existing code)
+        if (!activeCell) return;
+        const coords = getCellCoordinates(activeCell);
+        if (!coords) return;
+
+        let newCoords = { ...coords };
+        let moved = false;
+
+        switch(e.key) {
+            case 'ArrowUp':
+                if (coords.row > 0) {
+                    newCoords.row--;
+                    moved = true;
+                }
+                break;
+            case 'ArrowDown':
+                newCoords.row++;
+                moved = true;
+                break;
+            case 'ArrowLeft':
+                if (coords.col > 0) {
+                    newCoords.col--;
+                    moved = true;
+                }
+                break;
+            case 'ArrowRight':
+                newCoords.col++;
+                moved = true;
+                break;
+        }
+
+        if (moved) {
+            e.preventDefault();
+            const newCell = document.querySelector('td[data-row="' + newCoords.row + '"][data-col="' + newCoords.col + '"]');
+            if (newCell) {
+                if (e.shiftKey) {
+                    selectCellsInRange(startCell || coords, newCoords);
+                } else {
+                    clearSelection();
+                    newCell.classList.add('selected');
+                    newCell.classList.add('active-cell');
+                    selectedCells.add(newCell);
+                    activeCell = newCell;
+                    startCell = newCoords;
+                    endCell = newCoords;
+                }
+                updateSelectionInfo();
+            }
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#csv-table')) {
+            clearSelection();
+        }
+    });
+
+    tableElement.addEventListener('dblclick', (e) => {
+        const target = e.target.closest('td');
+        if (target) {
+            const value = target.textContent.trim();
+            console.log('Cell value:', value);
+        }
+    });
+}
+
+// Updated selectCellsInRange to not clear Ctrl+clicked cells
+function selectCellsInRange(start, end) {
+    if (!start || !end) return;
+    
+    // Store ctrl+clicked cells
+    const ctrlSelectedCells = new Set();
+    selectedCells.forEach(cell => {
+        const coords = getCellCoordinates(cell);
+        if (coords) {
+            const inRange = coords.row >= Math.min(start.row, end.row) && 
+                           coords.row <= Math.max(start.row, end.row) &&
+                           coords.col >= Math.min(start.col, end.col) && 
+                           coords.col <= Math.max(start.col, end.col);
+            if (!inRange) {
+                ctrlSelectedCells.add(cell);
+            }
+        }
+    });
+    
+    // Clear only cells in the range
+    document.querySelectorAll('td.selected').forEach(el => {
+        if (!ctrlSelectedCells.has(el)) {
+            el.classList.remove('selected');
+            selectedCells.delete(el);
+        }
+    });
+    
+    const minRow = Math.min(start.row, end.row);
+    const maxRow = Math.max(start.row, end.row);
+    const minCol = Math.min(start.col, end.col);
+    const maxCol = Math.max(start.col, end.col);
+
+    const cells = document.querySelectorAll('td[data-row][data-col]');
+
+    cells.forEach(cell => {
+        const coords = getCellCoordinates(cell);
+        if (coords && coords.row >= minRow && coords.row <= maxRow && 
+            coords.col >= minCol && coords.col <= maxCol) {
+            cell.classList.add('selected');
+            selectedCells.add(cell);
+        }
+    });
+
+    // Ensure active cell
+    const startCellElement = document.querySelector('td[data-row="' + start.row + '"][data-col="' + start.col + '"]');
+    if (startCellElement) {
+        document.querySelectorAll('td.active-cell').forEach(el => el.classList.remove('active-cell'));
+        startCellElement.classList.add('active-cell');
+        activeCell = startCellElement;
+    }
+
+    updateSelectionInfo();
+}
+
+// Updated column selection
+function selectColumn(columnIndex, ctrlKey, shiftKey) {
+    if (!ctrlKey && !shiftKey) {
+        clearSelection();
+        lastSelectedColumn = columnIndex;
+    }
+
+    if (shiftKey && lastSelectedColumn !== null && lastSelectedColumn !== columnIndex) {
+        // Clear if not Ctrl+Shift
+        if (!ctrlKey) {
+            clearSelection();
+        }
+        
+        const minCol = Math.min(lastSelectedColumn, columnIndex);
+        const maxCol = Math.max(lastSelectedColumn, columnIndex);
+        
+        for (let col = minCol; col <= maxCol; col++) {
+            if (!selectedColumns.has(col)) {
+                selectedColumns.add(col);
+                const cells = document.querySelectorAll('td[data-col="' + col + '"], th[data-col="' + col + '"]');
+                cells.forEach(cell => {
+                    cell.classList.add('column-selected');
+                    if (cell.tagName === 'TD') selectedCells.add(cell);
+                });
+            }
+        }
+    } else if (ctrlKey) {
+        // Toggle selection
+        if (selectedColumns.has(columnIndex)) {
+            selectedColumns.delete(columnIndex);
+            const cells = document.querySelectorAll('td[data-col="' + columnIndex + '"], th[data-col="' + columnIndex + '"]');
+            cells.forEach(cell => {
+                cell.classList.remove('column-selected');
+                if (cell.tagName === 'TD') selectedCells.delete(cell);
+            });
+        } else {
+            selectedColumns.add(columnIndex);
+            const cells = document.querySelectorAll('td[data-col="' + columnIndex + '"], th[data-col="' + columnIndex + '"]');
+            cells.forEach(cell => {
+                cell.classList.add('column-selected');
+                if (cell.tagName === 'TD') selectedCells.add(cell);
+            });
+        }
+    } else {
+        // Single selection
+        selectedColumns.add(columnIndex);
+        const cells = document.querySelectorAll('td[data-col="' + columnIndex + '"], th[data-col="' + columnIndex + '"]');
+        cells.forEach(cell => {
+            cell.classList.add('column-selected');
+            if (cell.tagName === 'TD') selectedCells.add(cell);
+        });
+    }
+    
+    updateSelectionInfo();
+}
+
+// Updated row selection
+function selectRow(rowIndex, ctrlKey, shiftKey) {
+    if (!ctrlKey && !shiftKey) {
+        clearSelection();
+        lastSelectedRow = rowIndex;
+    }
+
+    if (shiftKey && lastSelectedRow !== null && lastSelectedRow !== rowIndex) {
+        // Clear if not Ctrl+Shift
+        if (!ctrlKey) {
+            clearSelection();
+        }
+        
+        const minRow = Math.min(lastSelectedRow, rowIndex);
+        const maxRow = Math.max(lastSelectedRow, rowIndex);
+        
+        for (let row = minRow; row <= maxRow; row++) {
+            if (!selectedRows.has(row)) {
+                selectedRows.add(row);
+                const rowHeader = document.querySelector('th[data-row="' + row + '"]');
+                if (rowHeader && rowHeader.parentElement) {
+                    const cells = rowHeader.parentElement.querySelectorAll('td, th');
+                    cells.forEach(cell => {
+                        cell.classList.add('row-selected');
+                        if (cell.tagName === 'TD') selectedCells.add(cell);
+                    });
+                }
+            }
+        }
+    } else if (ctrlKey) {
+        // Toggle selection
+        if (selectedRows.has(rowIndex)) {
+            selectedRows.delete(rowIndex);
+            const rowHeader = document.querySelector('th[data-row="' + rowIndex + '"]');
+            if (rowHeader && rowHeader.parentElement) {
+                const cells = rowHeader.parentElement.querySelectorAll('td, th');
+                cells.forEach(cell => {
+                    cell.classList.remove('row-selected');
+                    if (cell.tagName === 'TD') selectedCells.delete(cell);
+                });
+            }
+        } else {
+            selectedRows.add(rowIndex);
+            const rowHeader = document.querySelector('th[data-row="' + rowIndex + '"]');
+            if (rowHeader && rowHeader.parentElement) {
+                const cells = rowHeader.parentElement.querySelectorAll('td, th');
+                cells.forEach(cell => {
+                    cell.classList.add('row-selected');
+                    if (cell.tagName === 'TD') selectedCells.add(cell);
+                });
+            }
+        }
+    } else {
+        // Single selection
+        selectedRows.add(rowIndex);
+        const rowHeader = document.querySelector('th[data-row="' + rowIndex + '"]');
+        if (rowHeader && rowHeader.parentElement) {
+            const cells = rowHeader.parentElement.querySelectorAll('td, th');
+            cells.forEach(cell => {
+                cell.classList.add('row-selected');
+                if (cell.tagName === 'TD') selectedCells.add(cell);
+            });
+        }
+    }
+    
+    updateSelectionInfo();
+}
+    
+                document.addEventListener('DOMContentLoaded', initializeSelection);
             </script>
         </body>
         </html>`;

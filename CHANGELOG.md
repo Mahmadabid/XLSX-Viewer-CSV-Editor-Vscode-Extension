@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.4.0 - Excel-like Multi-Selection & Copy
+- **Multi-Selection for Rows/Columns:**
+  - Hold <kbd>Ctrl</kbd> and click multiple row or column headers to select/deselect multiple rows or columns.
+  - Hold <kbd>Shift</kbd> and click to select a range of rows or columns.
+- **Excel/Google Sheets Compatible Copy:**
+  - Pasting into Excel or Google Sheets will place data in the correct cells, not a single cell.
+- **Improved Selection Management:**
+  - Visual feedback for multi-row and multi-column selection.
+  - Selection info box shows the size of the current selection, Displayed at bottom right corner.
+
 ## v1.3.0 - Enhanced Selection Features
 - **Text Selection**: Added text selection for copying with ease.
 - **Cell Selection**: Improved cell, row, and column selection functionality

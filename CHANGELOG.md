@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.5.0 - Merged Cells & Resizing Support
+
+### **Merged Cell Support:**
+- Full support for both horizontal and vertical merged cells from Excel files
+- Proper content alignment and positioning within merged cells
+- Maintains original Excel formatting and alignment
+
+### **Interactive Resizing:**
+- Drag column borders to resize column widths
+- Drag row borders to resize row heights
+- Visual resize handles on headers with hover effects
+- Real-time size indicators during resizing
+
+### **Auto-Fit Functionality:**
+- Auto-fit button to automatically resize all columns based on content
+- Double-click column borders to auto-fit individual columns
+- Double-click row borders to auto-fit individual rows
+- Smart content-based sizing with maximum width limits
+
 ## v1.4.0 - Excel-like Multi-Selection & Copy
 - **Multi-Selection for Rows/Columns:**
   - Hold <kbd>Ctrl</kbd> and click multiple row or column headers to select/deselect multiple rows or columns.

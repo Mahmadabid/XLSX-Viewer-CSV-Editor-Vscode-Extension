@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.5.1 - CSV Table Editing
+- Added in-table **Edit Table** mode for CSV files with **Save** and **Cancel** actions.
+- While editing, the **Edit File** and **Edit Table** buttons are hidden to reduce accidental mode switching.
+- Improved webview reliability by waiting for the webview to be ready before streaming table rows.
+
 ## v1.5.0 - Merged Cells & Resizing Support
 
 ### **Merged Cell Support:**

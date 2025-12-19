@@ -20,13 +20,12 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
         try {
             const BATCH_SIZE = 1000;
             const filePath = document.uri.fsPath;
-            const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' });
             let leftover = '';
             let rows: string[][] = [];
             let rowCount = 0;
             let columnCount = 0;
             let isFirstBatch = true;
-            let isDone = false;
+            let streamStarted = false;
 
             // Helper to generate table HTML for a batch
             function generateTableRowsHtml(batchRows: string[][], startIndex: number): string {
@@ -62,7 +61,10 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
             }
 
             // Set up webview
-            webviewPanel.webview.options = { enableScripts: true };
+            webviewPanel.webview.options = {
+                enableScripts: true,
+                localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'resources')]
+            };
             webviewPanel.webview.html = this.getWebviewContent(
                 `<table id="csv-table" border="1" cellspacing="0" cellpadding="5">
                     <thead></thead><tbody></tbody>
@@ -70,90 +72,119 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 webviewPanel
             );
 
-            // Listen for messages
-            webviewPanel.webview.onDidReceiveMessage(async message => {
-                if (message.command === 'toggleView') {
-                    const isTableView = message.isTableView;
-                    if (isTableView) {
-                        webviewPanel.webview.html = this.getWebviewContent(
-                            `<table id="csv-table" border="1" cellspacing="0" cellpadding="5">
-                                <thead></thead><tbody></tbody>
-                            </table>`,
-                            webviewPanel
-                        );
-                    } else {
-                        await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default');
-                        webviewPanel.dispose();
-                    }
-                } else if (message.command === 'toggleBackground') {
-                    webviewPanel.webview.postMessage({ command: 'toggleBackground' });
-                }
-            });
+            const startStreaming = () => {
+                if (streamStarted) return;
+                streamStarted = true;
 
-            // Read file in batches
-            fileStream.on('data', chunk => {
-                let data = leftover + chunk;
-                let lines = data.split('\n');
-                leftover = lines.pop() || '';
-                for (let line of lines) {
-                    rows.push(line.split(','));
-                    if (rows.length === 1) {
-                        columnCount = rows[0].length;
+                const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' });
+                webviewPanel.onDidDispose(() => {
+                    try { fileStream.destroy(); } catch { }
+                });
+
+                fileStream.on('data', chunk => {
+                    let data = leftover + chunk;
+                    let lines = data.split('\n');
+                    leftover = lines.pop() || '';
+                    for (let line of lines) {
+                        rows.push(line.split(','));
+                        if (rowCount === 0) {
+                            columnCount = rows[0].length;
+                        }
+                        rowCount++;
+                        if (rowCount % BATCH_SIZE === 0) {
+                            if (isFirstBatch) {
+                                webviewPanel.webview.postMessage({
+                                    command: 'initTable',
+                                    headerHtml: generateTableHeaderHtml(columnCount),
+                                    rowsHtml: generateTableRowsHtml(rows, 0)
+                                });
+                                isFirstBatch = false;
+                            } else {
+                                webviewPanel.webview.postMessage({
+                                    command: 'appendRows',
+                                    rowsHtml: generateTableRowsHtml(rows, rowCount - rows.length)
+                                });
+                            }
+                            rows = [];
+                        }
                     }
-                    rowCount++;
-                    if (rowCount % BATCH_SIZE === 0) {
+                });
+
+                fileStream.on('end', () => {
+                    if (leftover) {
+                        rows.push(leftover.split(','));
+                        if (rowCount === 0) {
+                            columnCount = rows[0].length;
+                        }
+                        rowCount++;
+                    }
+                    if (rows.length > 0) {
                         if (isFirstBatch) {
                             webviewPanel.webview.postMessage({
                                 command: 'initTable',
                                 headerHtml: generateTableHeaderHtml(columnCount),
                                 rowsHtml: generateTableRowsHtml(rows, 0)
                             });
-                            isFirstBatch = false;
                         } else {
                             webviewPanel.webview.postMessage({
                                 command: 'appendRows',
                                 rowsHtml: generateTableRowsHtml(rows, rowCount - rows.length)
                             });
                         }
-                        rows = [];
+                    }
+                });
+
+                fileStream.on('error', err => {
+                    vscode.window.showErrorMessage(`Error reading CSV file: ${err}`);
+                });
+            };
+
+            // Listen for messages
+            webviewPanel.webview.onDidReceiveMessage(async message => {
+                if (message.command === 'webviewReady') {
+                    startStreaming();
+                    return;
+                }
+
+                if (message.command === 'toggleView') {
+                    if (!message.isTableView) {
+                        await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default');
+                        webviewPanel.dispose();
+                    }
+                    return;
+                }
+
+                if (message.command === 'saveCsv') {
+                    try {
+                        const text = typeof message.text === 'string' ? message.text : '';
+                        await vscode.workspace.fs.writeFile(document.uri, Buffer.from(text, 'utf8'));
+                        webviewPanel.webview.postMessage({ command: 'saveResult', ok: true });
+                    } catch (err) {
+                        webviewPanel.webview.postMessage({ command: 'saveResult', ok: false, error: String(err) });
                     }
                 }
             });
 
-            fileStream.on('end', () => {
-                if (leftover) {
-                    rows.push(leftover.split(','));
-                }
-                if (rows.length > 0) {
-                    if (isFirstBatch) {
-                        webviewPanel.webview.postMessage({
-                            command: 'initTable',
-                            headerHtml: generateTableHeaderHtml(columnCount),
-                            rowsHtml: generateTableRowsHtml(rows, 0)
-                        });
-                    } else {
-                        webviewPanel.webview.postMessage({
-                            command: 'appendRows',
-                            rowsHtml: generateTableRowsHtml(rows, rowCount - rows.length)
-                        });
-                    }
-                }
-                isDone = true;
-            });
+            // Fallback: don't block forever if the webview never sends webviewReady
+            setTimeout(() => startStreaming(), 500);
         } catch (error) {
             vscode.window.showErrorMessage(`Error reading CSV file: ${error}`);
         }
     }
 
     private getWebviewContent(tableHtml: string, webviewPanel: vscode.WebviewPanel): string {
-        const imgUri = webviewPanel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'view.png'));
-        const svgUri = webviewPanel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'table.svg'));
+        const webview = webviewPanel.webview;
+        const imgUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'view.png'));
+        const svgUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'table.svg'));
+        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'csvWebview.js'));
+        const cspSource = webview.cspSource;
 
         return `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource} https: data:; style-src ${cspSource} 'unsafe-inline'; script-src ${cspSource};">
             <meta name="viewport" width="device-width, initial-scale=1.0">
             <title>CSV Viewer</title>
             <style>
@@ -420,6 +451,13 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     background: rgba(255, 255, 255, 0.8);
                     color: black;
                                     }
+
+                .hidden { display: none !important; }
+
+                body.edit-mode td {
+                    user-select: text;
+                    cursor: text;
+                }
             </style>
         </head>
         <body>
@@ -430,6 +468,15 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                         <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                     </svg>
                     Edit File
+                </button>
+                <button id="toggleTableEditButton" class="toggle-button" title="Edit CSV directly in the table">
+                    Edit Table
+                </button>
+                <button id="saveTableEditsButton" class="toggle-button hidden" title="Save table edits">
+                    Save
+                </button>
+                <button id="cancelTableEditsButton" class="toggle-button hidden" title="Cancel table edits">
+                    Cancel
                 </button>
                 <button id="toggleBackgroundButton" class="toggle-button" title="Toggle Light/Dark Mode">
                     <svg id="lightIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
@@ -541,73 +588,6 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     lastSelectedColumn = null;
                     document.getElementById('selectionInfo').style.display = 'none';
                 }
-
-                function selectCellsInRange(start, end) {
-                    // Clear cell selections but keep row/column selections
-                    document.querySelectorAll('td.selected, td.active-cell').forEach(el => {
-                        el.classList.remove('selected', 'active-cell');
-                    });
-                    selectedCells.clear();
-                    
-                    const minRow = Math.min(start.row, end.row);
-                    const maxRow = Math.max(start.row, end.row);
-                    const minCol = Math.min(start.col, end.col);
-                    const maxCol = Math.max(start.col, end.col);
-
-                    const cells = document.querySelectorAll('td[data-row][data-col]');
-                    let count = 0;
-
-                    cells.forEach(cell => {
-                        const coords = getCellCoordinates(cell);
-                        if (coords && coords.row >= minRow && coords.row <= maxRow && 
-                            coords.col >= minCol && coords.col <= maxCol) {
-                            cell.classList.add('selected');
-                            selectedCells.add(cell);
-                            count++;
-                        }
-                    });
-
-                    const startCellElement = document.querySelector('td[data-row="' + start.row + '"][data-col="' + start.col + '"]');
-                    if (startCellElement) {
-                        startCellElement.classList.add('active-cell');
-                        activeCell = startCellElement;
-                    }
-
-                    if (count > 1) {
-                        const rows = maxRow - minRow + 1;
-                        const cols = maxCol - minCol + 1;
-                        document.getElementById('selectionInfo').textContent = rows + 'R × ' + cols + 'C';
-                        document.getElementById('selectionInfo').style.display = 'block';
-                    }
-                }
-
-                function selectColumn(columnIndex, ctrlKey, shiftKey) {
-                    if (!ctrlKey && !shiftKey) {
-                        clearSelection();
-                    }
-
-                    if (shiftKey && lastSelectedColumn !== null) {
-                        if (!ctrlKey) {
-                            clearSelection();
-                        }
-                        const minCol = Math.min(lastSelectedColumn, columnIndex);
-                        const maxCol = Math.max(lastSelectedColumn, columnIndex);
-                        for (let col = minCol; col <= maxCol; col++) {
-                            selectedColumns.add(col);
-                            const cells = document.querySelectorAll('td[data-col="' + col + '"], th[data-col="' + col + '"]');
-                            cells.forEach(cell => {
-                                cell.classList.add('column-selected');
-                                if (cell.tagName === 'TD') selectedCells.add(cell);
-                            });
-                        }
-                    } else {
-                        if (ctrlKey && selectedColumns.has(columnIndex)) {
-                            selectedColumns.delete(columnIndex);
-                            const cells = document.querySelectorAll('td[data-col="' + columnIndex + '"], th[data-col="' + columnIndex + '"]');
-                            cells.forEach(cell => {
-                                cell.classList.remove('column-selected');
-                                if (cell.tagName === 'TD') selectedCells.delete(cell);
-                            });
                         } else {
                             selectedColumns.add(columnIndex);
                             const cells = document.querySelectorAll('td[data-col="' + columnIndex + '"], th[data-col="' + columnIndex + '"]');
@@ -1142,6 +1122,12 @@ function selectRow(rowIndex, ctrlKey, shiftKey) {
     
                 document.addEventListener('DOMContentLoaded', initializeSelection);
             </script>
+            <noscript>
+                <div style="padding: 8px; margin-top: 10px; background: #fff3cd; border: 1px solid #ffeeba;">
+                    JavaScript is disabled in this webview, so the CSV table cannot load.
+                </div>
+            </noscript>
+            <script src="${scriptUri}"></script>
         </body>
         </html>`;
     }

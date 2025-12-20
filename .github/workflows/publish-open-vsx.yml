@@ -1,0 +1,26 @@
+name: Publish to Open VSX + VS Marketplace
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish to VS Marketplace
+        run: npx vsce publish -p ${{ secrets.VSCE_TOKEN }}
+
+      - name: Publish to Open VSX
+        run: npx ovsx publish -p ${{ secrets.OPEN_VSX_TOKEN }}

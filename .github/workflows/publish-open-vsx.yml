@@ -2,25 +2,50 @@ name: Publish to Open VSX + VS Marketplace
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches:
+      - main
+    paths:
+      - "package.json"
+
+permissions:
+  contents: read   # no write access needed
 
 jobs:
   publish:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout code
       - uses: actions/checkout@v4
 
+      # 2️⃣ Setup Node.js
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: npm ci
 
+      # 4️⃣ Read package info
+      - name: Read package info
+        id: pkg
+        run: |
+          echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+          echo "ext=$(node -p "require('./package.json').publisher + '.' + require('./package.json').name")" >> $GITHUB_OUTPUT
+
+      # 5️⃣ Prevent republish of same version (fails workflow if already published)
+      - name: Prevent republish of same version
+        run: |
+          if npx ovsx show ${{ steps.pkg.outputs.ext }}@${{ steps.pkg.outputs.version }}; then
+            echo "Version ${{ steps.pkg.outputs.version }} already published on Open VSX"
+            exit 1
+          fi
+
+      # 6️⃣ Publish to VS Marketplace
       - name: Publish to VS Marketplace
         run: npx vsce publish -p ${{ secrets.VSCE_TOKEN }}
 
+      # 7️⃣ Publish to Open VSX
       - name: Publish to Open VSX
         run: npx ovsx publish -p ${{ secrets.OPEN_VSX_TOKEN }}

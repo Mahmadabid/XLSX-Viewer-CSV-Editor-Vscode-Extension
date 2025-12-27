@@ -30,7 +30,9 @@ XLSX Viewer & CSV Editor is a powerful **Visual Studio Code** extension that all
 
 ### CSV Editing
 ✅ **Table View** - View CSV files in a structured table format\
-✅ **Edit Table Mode** - Edit directly in the table with **Save** and **Cancel**\
+✅ **Edit Table Mode** - Edit directly in the table with **Save**, **Cancel**, and **Undo/Redo** support\
+✅ **Excel-like Shortcuts** - <kbd>Ctrl+S</kbd> to save, <kbd>Enter</kbd> to move down, <kbd>Ctrl+Z/Y</kbd> for undo/redo\
+✅ **Premium UI** - Smooth animations, sticky headers, and Apple-like visual feedback\
 ✅ **Edit File** - Open the CSV in VS Code’s default text editor when needed
 
 ## 🛠️ Installation

@@ -1,0 +1,541 @@
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-color: #ffffff;
+    --text-color: #1d1d1f;
+    --border-color: #d2d2d7;
+    --header-bg: #f5f5f7;
+    --row-hover-bg: #f5f5f7;
+    --accent-color: #007aff;
+    --accent-bg: rgba(0, 122, 255, 0.1);
+    --selection-border: #007aff;
+    --selection-bg: rgba(0, 122, 255, 0.18);
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --button-bg: #007aff;
+    --button-text: #ffffff;
+    --button-hover: #0062cc;
+    --tooltip-bg: rgb(231, 248, 255);
+    --tooltip-text: #000000;
+    --tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+body.alt-bg {
+    --bg-color: #1c1c1e;
+    --text-color: #f5f5f7;
+    --border-color: #38383a;
+    --header-bg: #2c2c2e;
+    --row-hover-bg: #2c2c2e;
+    --accent-color: #0a84ff;
+    --accent-bg: rgba(10, 132, 255, 0.15);
+    --selection-border: #0a84ff;
+    --selection-bg: rgba(10, 132, 255, 0.25);
+    --button-bg: #0a84ff;
+    --button-hover: #0070eb;
+    --tooltip-bg: rgb(231, 248, 255);
+    /* Original tooltip for dark mode too per request */
+    --tooltip-text: #000000;
+    --tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+body {
+    font-family: var(--font-family);
+    padding: 48px 0 0 3px;
+    /* Increased padding to 60px to clear fixed header */
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.edit-mode #content {
+    outline: 3px solid #007aff;
+    outline-offset: -2px;
+    border-radius: 8px;
+    margin: 4px;
+    overflow: visible;
+    position: relative;
+    z-index: 1;
+    /* Stay below the fixed header */
+}
+
+body.alt-bg.edit-mode #content {
+    outline: 2px solid #0a84ff;
+}
+
+#content {
+    position: relative;
+    z-index: 1;
+}
+
+table {
+    border-collapse: collapse;
+    width: auto;
+    min-width: 0;
+    /* Remove 100% to allow column width enforcement */
+    table-layout: fixed;
+    user-select: none;
+    -webkit-user-select: none;
+    border-spacing: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+    /* For rounded corners on the table */
+}
+
+th,
+td {
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    /* Ensure truncation works */
+    text-overflow: ellipsis;
+    /* Add ellipsis */
+    position: relative;
+    cursor: cell;
+    min-width: 40px;
+    max-width: 180px;
+    /* Capped at 180px by default */
+    transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+
+body.expanded-mode th,
+body.expanded-mode td {
+    max-width: none;
+    /* Remove cap in expanded mode */
+}
+
+th {
+    background-color: var(--header-bg);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    color: var(--text-color);
+    border-bottom: 2px solid var(--border-color);
+    /* Slightly thicker bottom border for headers */
+}
+
+td:nth-child(1),
+th:nth-child(1) {
+    width: 30px !important;
+    min-width: 30px !important;
+    background-color: var(--header-bg);
+    text-align: center;
+    color: var(--text-color);
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    /* Higher z-index to stay on top of other cells */
+    border-right: 2px solid var(--border-color);
+}
+
+/* Fix for top-left corner index */
+th:nth-child(1) {
+    z-index: 30;
+}
+
+.button-container {
+    margin-top: 0px;
+    margin-bottom: 3px;
+    display: flex;
+    gap: 12px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: visible !important;
+    /* Critical: allow tooltips to pop out */
+    white-space: nowrap;
+    padding: 6px 12px;
+    align-items: center;
+    z-index: 10000;
+}
+
+.header-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 48px;
+    background-color: var(--bg-color);
+    opacity: 0.8;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 9999;
+    border-bottom: 1px solid var(--border-color);
+    pointer-events: none;
+    /* Let clicks pass through to buttons */
+}
+
+.button-container img {
+    flex-shrink: 0;
+    max-width: none !important;
+    width: 120px;
+    /* Logo width */
+    height: auto;
+    display: inline-block;
+}
+
+.button-container svg {
+    flex-shrink: 0;
+    width: 16px;
+    /* Icon width */
+    height: 16px;
+    stroke-width: 2;
+}
+
+.toggle-button {
+    height: 32px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
+}
+
+.toggle-button:hover {
+    background-color: var(--button-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 122, 255, 0.25);
+}
+
+.toggle-button:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.toggle-button svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+}
+
+td {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    padding: 6px 10px;
+}
+
+td span.cell-content {
+    display: block;
+    user-select: none;
+    pointer-events: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Tooltip Styling */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    z-index: 100000;
+    /* Ensure the tooltip wrapper is also high */
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 250px;
+    background-color: var(--tooltip-bg);
+    color: var(--tooltip-text);
+    text-align: center;
+    border-radius: 8px;
+    padding: 12px;
+    position: fixed;
+    /* Fixed to bypass container clipping */
+    z-index: 100000 !important;
+    /* Extremely high z-index */
+    top: 45px;
+    right: 15px;
+    /* Positioned relative to viewport right */
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    white-space: normal;
+    line-height: 1.5;
+    box-shadow: var(--tooltip-shadow);
+    border: 1px solid var(--border-color);
+    font-size: 12px;
+    pointer-events: none;
+    transform: translateY(-10px);
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.tooltip .tooltiptext span {
+    color: #ff6600;
+    /* Original color */
+    font-weight: 600;
+}
+
+.tooltip .tooltiptext .warning {
+    color: red;
+    /* Original color */
+    font-weight: 700;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.tooltip .tooltiptext .instruction {
+    color: rgb(2, 105, 190);
+    /* Original color */
+    font-weight: normal;
+}
+
+/* Selection Styles */
+td.selected {
+    border: 2px solid var(--selection-border) !important;
+    background-color: var(--selection-bg) !important;
+    z-index: 5;
+}
+
+body.alt-bg td.selected {
+    border: 2px solid var(--selection-border) !important;
+    background-color: var(--selection-bg) !important;
+}
+
+td.active-cell {
+    border: 2px solid var(--accent-color) !important;
+    background-color: transparent !important;
+    z-index: 6;
+    /* Box shadow removed to prefer simple border */
+}
+
+body.alt-bg td.active-cell {
+    background-color: transparent !important;
+    border: 2px solid var(--accent-color) !important;
+}
+
+td.active-cell::after {
+    content: '';
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    width: 6px;
+    height: 6px;
+    background: var(--accent-color);
+    border: 1px solid var(--bg-color);
+    border-radius: 1px;
+}
+
+/* Row/Column Selection */
+td.column-selected {
+    background-color: var(--selection-bg) !important;
+    border-left: 1px solid var(--selection-border);
+    border-right: 1px solid var(--selection-border);
+}
+
+th.column-selected {
+    background-color: var(--accent-color) !important;
+    /* Solid Blue */
+    color: white !important;
+    border-bottom: 2px solid var(--accent-color) !important;
+}
+
+body.alt-bg th.column-selected {
+    background-color: var(--accent-color) !important;
+    color: white !important;
+}
+
+td.row-selected {
+    background-color: var(--selection-bg) !important;
+    border-top: 1px solid var(--selection-border);
+    border-bottom: 1px solid var(--selection-border);
+}
+
+th.row-selected {
+    background-color: var(--accent-color) !important;
+    /* Solid Blue */
+    color: white !important;
+    border-right: 2px solid var(--accent-color) !important;
+}
+
+body.alt-bg th.row-selected {
+    background-color: var(--accent-color) !important;
+    color: white !important;
+}
+
+body.alt-bg th.row-selected {
+    background-color: rgba(10, 132, 255, 0.2) !important;
+    color: #fff !important;
+}
+
+th.col-header,
+th.row-header {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+}
+
+th.col-header:hover,
+th.row-header:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+body.alt-bg th.col-header:hover,
+body.alt-bg th.row-header:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Copy Animation */
+td.copying {
+    animation: copyFlash 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@keyframes copyFlash {
+    0% {
+        background-color: inherit;
+    }
+
+    50% {
+        background-color: var(--accent-bg);
+        opacity: 0.8;
+    }
+
+    100% {
+        background-color: inherit;
+    }
+}
+
+::selection {
+    background-color: rgba(0, 122, 255, 0.2);
+}
+
+td:hover {
+    background-color: var(--row-hover-bg) !important;
+}
+
+body.alt-bg td:hover {
+    background-color: var(--row-hover-bg) !important;
+}
+
+/* Selection Info Overlay */
+.selection-info {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #1d1d1f;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    display: none;
+    z-index: 1001;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+body.alt-bg .selection-info {
+    background: rgba(30, 30, 30, 0.9);
+    color: #f5f5f7;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.hidden {
+    display: none !important;
+}
+
+body.edit-mode td {
+    user-select: text;
+    cursor: text;
+    text-overflow: clip;
+    /* Remove ellipsis in edit mode */
+    max-width: none !important;
+    /* Allow cell to expand to show full text */
+    overflow: visible;
+}
+
+body.edit-mode td[contenteditable="true"]:focus {
+    outline: none;
+    border: 2px solid #ff9500 !important;
+    /* Warm orange border for edit mode selection */
+    background-color: var(--bg-color) !important;
+    z-index: 10;
+}
+
+/* Notification Toast */
+.toast-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background-color: rgba(255, 255, 255, 0.95);
+    color: #1d1d1f;
+    padding: 12px 24px;
+    border-radius: 100px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    pointer-events: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.alt-bg .toast-notification {
+    background-color: rgba(44, 44, 46, 0.95);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.toast-notification.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.toast-icon-wrapper {
+    width: 24px;
+    height: 24px;
+    background-color: #34c759;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.toast-icon-wrapper svg {
+    width: 16px;
+    height: 16px;
+    stroke: white;
+}
+
+.toast-text {
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+}

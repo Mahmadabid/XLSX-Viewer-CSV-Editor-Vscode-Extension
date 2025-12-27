@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.5.2 - Premium UX Refinements & Bug Fixes
+- **Premium CSV Editor UX**:
+  - Added **Undo (Ctrl+Z)** and **Redo (Ctrl+Y)** functionality in table edit mode.
+  - Improved Keyboard Navigation: **Enter** key now moves to the cell below instead of adding a newline.
+  - Refined **Save Behavior**: Ctrl+S now saves changes, clears selection, and blurs active cell without exiting edit mode.
+  - Added visual **Save Confirmation** (premium horizontal toast with green tick).
+  - Added **Edit Mode Indicator**: Sharp outer border and active cell highlighting.
+  - Fixed horizontal scrolling and text truncation issues in edit mode.
+  - Added subtle hover highlights for table cells.
+
 ## v1.5.1 - CSV Table Editing
 - Added in-table **Edit Table** mode for CSV files with **Save** and **Cancel** actions.
 - While editing, the **Edit File** and **Edit Table** buttons are hidden to reduce accidental mode switching.

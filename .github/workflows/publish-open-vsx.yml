@@ -37,7 +37,9 @@ jobs:
       # 5️⃣ Prevent republish of same version (fails workflow if already published)
       - name: Prevent republish of same version
         run: |
-          if npx ovsx show ${{ steps.pkg.outputs.ext }}@${{ steps.pkg.outputs.version }}; then
+          # Check if this exact version exists on Open VSX by requesting its metadata.
+          # 'ovsx get --metadata -v <version>' returns 0 when metadata exists.
+          if npx ovsx get "${{ steps.pkg.outputs.ext }}" --metadata -v "${{ steps.pkg.outputs.version }}" > /dev/null 2>&1; then
             echo "Version ${{ steps.pkg.outputs.version }} already published on Open VSX"
             exit 1
           fi

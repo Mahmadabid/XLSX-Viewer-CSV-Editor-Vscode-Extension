@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as Excel from 'exceljs';
-import { convertARGBToRGBA, isShadeOfBlack } from './utilities';
+import { convertARGBToRGBA, isShadeOfBlack } from './xlsx/xlsxUtilities';
 
 export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
     constructor(private readonly context: vscode.ExtensionContext) { }

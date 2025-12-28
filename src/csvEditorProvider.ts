@@ -283,10 +283,10 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
     private getWebviewContent(tableHtml: string, webviewPanel: vscode.WebviewPanel): string {
         const webview = webviewPanel.webview;
-        const imgUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'view.png'));
-        const svgUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'table.svg'));
-        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'csvWebview.js'));
-        const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'csvWebview.css'));
+        const imgUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'csv', 'view.png'));
+        const svgUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'csv', 'table.svg'));
+        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'csv', 'csvWebview.js'));
+        const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'csv', 'csvWebview.css'));
         const cspSource = webview.cspSource;
 
         return `

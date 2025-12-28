@@ -1,0 +1,892 @@
+* {
+    box-sizing: border-box;
+}
+
+.hidden {
+    display: none !important;
+}
+
+:root {
+    --row-header-width: 60px;
+
+    /* Match CSV premium primitives */
+    --bg-color: #ffffff;
+    --text-color: #1d1d1f;
+    --border-color: #d2d2d7;
+    --header-bg: #f5f5f7;
+    --row-hover-bg: rgba(0, 132, 255, 0.076);
+
+    --accent-color: #007aff;
+    --accent-bg: rgba(0, 122, 255, 0.10);
+    --selection-border: #007aff;
+    --selection-bg: rgba(0, 122, 255, 0.12);
+
+    --success-color: #1e8e3e;
+    --success-bg: #e6f4ea;
+
+    --font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --button-bg: #007aff;
+    --button-hover: #0062cc;
+    --button-text: #ffffff;
+
+    --tooltip-bg: rgb(231, 248, 255);
+    --tooltip-text: #000000;
+    --tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+body {
+    font-family: var(--font-family);
+    padding: 48px 0 0 3px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.alt-bg {
+    --bg-color: #1c1c1e;
+    --text-color: #f5f5f7;
+    --border-color: #38383a;
+    --header-bg: #2c2c2e;
+    --row-hover-bg: rgba(78, 149, 255, 0.08);
+
+    --accent-color: #0a84ff;
+    --accent-bg: rgba(10, 132, 255, 0.15);
+    --selection-border: #0a84ff;
+    --selection-bg: rgba(10, 132, 255, 0.20);
+
+    --button-bg: #0a84ff;
+    --button-hover: #0070eb;
+}
+
+/* Sticky toolbar parity with CSV.
+   Keep legacy body.sticky-toolbar-disabled working during transition. */
+body:not(.sticky-toolbar-enabled),
+body.sticky-toolbar-disabled {
+    padding-top: 0;
+}
+
+body:not(.sticky-toolbar-enabled) .header-background,
+body.sticky-toolbar-disabled .header-background {
+    display: none;
+}
+
+body:not(.sticky-toolbar-enabled) .toolbar,
+body.sticky-toolbar-disabled .toolbar {
+    /* Use relative positioning when toolbar is not sticky so it flows with content
+       (matches CSV editor behavior and avoids unexpected horizontal offsets).
+    */
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    z-index: 2;
+}
+
+/* Back-compat: when toolbar has explicit class for not-sticky, ensure it flows */
+.toolbar.not-sticky {
+    position: relative;
+}
+
+body:not(.sticky-toolbar-enabled) .table-scroll,
+body.sticky-toolbar-disabled .table-scroll {
+    max-height: calc(100vh - 6px);
+}
+
+/* Header blur bar (CSV-like) */
+.header-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 48px;
+    background-color: var(--bg-color);
+    opacity: 0.85;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 9999;
+    border-bottom: 1px solid var(--border-color);
+    pointer-events: none;
+}
+
+/* Toolbar (CSV-like) */
+.toolbar {
+    height: 48px;
+    display: flex;
+    gap: 12px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding: 0 12px;
+    align-items: center;
+    z-index: 10000;
+}
+
+.toolbar svg {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+}
+
+.toggle-button {
+    height: 32px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    box-shadow: 0 1px 3px rgba(0, 122, 255, 0.20);
+}
+
+.toggle-button:hover {
+    background-color: var(--button-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 122, 255, 0.24);
+}
+
+.toggle-button:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.toggle-button.icon-only {
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.toggle-button.icon-only svg {
+    margin: 0;
+}
+
+.sheet-selector {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 13px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    cursor: pointer;
+    max-width: 240px;
+}
+
+.sheet-selector:focus {
+    outline: none;
+    border-color: var(--accent-color) !important;
+}
+
+.sheet-selector:hover {
+    border-color: var(--button-hover);
+}
+
+.settings-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: flex-start;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    color: var(--text-color);
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+body.alt-bg .settings-panel {
+    background: rgba(44, 44, 46, 0.82);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.settings-panel.hidden {
+    display: none !important;
+}
+
+.settings-panel.floating {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    z-index: 200001;
+}
+
+.settings-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.setting-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-color);
+    user-select: none;
+}
+
+.setting-item {
+  cursor: pointer;
+}
+
+input[type="checkbox"]:hover {
+  cursor: pointer;
+}
+
+/* Disabled state for checkboxes: visually muted and non-interactive */
+.setting-item input[type="checkbox"]:disabled {
+    /* Keep same sizing/shape but make it look disabled */
+    cursor: not-allowed;
+    opacity: 0.6;
+    background-color: transparent;
+    border-color: var(--border-color);
+    box-shadow: none;
+}
+
+/* Ensure no checkmark appears if somehow checked while disabled */
+.setting-item input[type="checkbox"]:disabled::after {
+    content: none !important;
+}
+
+/* Dim the label text and prevent pointer cursor when disabled */
+.setting-item input[type="checkbox"]:disabled + span {
+    opacity: 0.65;
+    cursor: not-allowed;
+    color: var(--text-color);
+}
+
+/* Dark mode tweaks for disabled label */
+body.alt-bg .setting-item input[type="checkbox"]:disabled + span {
+    color: var(--text-color);
+    opacity: 0.65;
+}
+
+/* Hyperlink hover tooltip */
+.link-tooltip {
+    position: fixed;
+    z-index: 10002;
+    max-width: min(560px, calc(100vw - 16px));
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.10);
+}
+
+body.alt-bg .link-tooltip {
+    background: rgba(44, 44, 46, 0.9);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.link-tooltip-url {
+    font-size: 12px;
+    opacity: 0.95;
+    margin-bottom: 8px;
+    word-break: break-all;
+}
+
+.link-tooltip-actions {
+    display: flex;
+    gap: 8px;
+}
+
+td[data-hyperlink] {
+    cursor: pointer;
+}
+
+/* Toast (CSV-like) */
+.toast-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.10);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10005;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.alt-bg .toast-notification {
+    background: rgba(44, 44, 46, 0.95);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.toast-notification.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.toast-icon-wrapper {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--success-bg);
+    color: var(--success-color);
+}
+
+.toast-icon-wrapper svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Edit mode */
+body.edit-mode table {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+body.edit-mode #content {
+    outline: 3px solid var(--accent-color);
+    outline-offset: -2px;
+    border-radius: 8px;
+    margin: 4px;
+    overflow: visible;
+    position: relative;
+    z-index: 1;
+}
+
+body.alt-bg.edit-mode #content {
+    outline: 2px solid var(--accent-color);
+}
+
+body.edit-mode td.editable-cell {
+    cursor: text;
+}
+
+body.edit-mode td.editable-cell:focus {
+    outline: 2px solid var(--selection-border);
+    outline-offset: -2px;
+}
+
+#content {
+    position: relative;
+    z-index: 1;
+}
+
+.table-scroll {
+    max-height: calc(100vh - 54px);
+    overflow: auto;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+}
+
+table {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    position: relative;
+    background-color: var(--bg-color);
+    user-select: none;
+    -webkit-user-select: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: visible;
+}
+
+body.alt-bg table {
+    background-color: #1e1e1e;
+}
+
+th,
+td {
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: cell;
+    white-space: nowrap;
+    min-width: 40px;
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+
+/* First row and column get top and left borders */
+thead th {
+    border-top: 1px solid var(--border-color);
+}
+
+tbody tr th:first-child,
+tbody tr td:first-child {
+    border-left: 1px solid var(--border-color);
+}
+
+thead th:first-child {
+    border-left: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 30;
+    background-color: var(--header-bg);
+}
+
+body.alt-bg thead th:first-child {
+    z-index: 30;
+}
+
+/* Excel-like headers */
+th.row-header,
+th.col-header {
+    background-color: var(--header-bg);
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 13px;
+    text-align: center;
+    user-select: none;
+    cursor: pointer;
+    z-index: 1;
+    border-bottom: 2px solid var(--border-color);
+}
+
+th.row-header {
+    width: var(--row-header-width);
+    min-width: var(--row-header-width);
+    max-width: var(--row-header-width);
+    text-align: center;
+    white-space: nowrap;
+    overflow: visible;
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    border-right: 2px solid var(--border-color);
+}
+
+th.col-header {
+    height: 20px;
+    min-height: 20px;
+    min-width: 40px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--header-bg);
+}
+
+th.row-header:hover,
+th.col-header:hover {
+    background-color: rgb(210, 210, 210);
+}
+body.alt-bg th.row-header:hover,
+body.alt-bg th.col-header:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Resize handles */
+.col-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    width: 4px;
+    height: 100%;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 10;
+}
+
+.col-resize-handle:hover {
+    background: rgba(26, 115, 232, 0.3);
+}
+
+.row-resize-handle {
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    cursor: row-resize;
+    background: transparent;
+    z-index: 10;
+}
+
+.row-resize-handle:hover {
+    background: rgba(26, 115, 232, 0.3);
+}
+
+/* Cell default styles */
+td {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    min-height: 20px;
+    white-space: nowrap;
+    min-width: 40px;
+    vertical-align: top;
+    position: relative;
+}
+
+/* Cap cell widths in normal mode, remove cap in expanded mode */
+th.col-header,
+td {
+    max-width: 180px;
+}
+
+body.expanded-mode th.col-header,
+body.expanded-mode td {
+    max-width: none;
+}
+
+/* Custom border cells get higher z-index to show over default borders */
+td[style*="border"] {
+    z-index: 2;
+}
+
+body.alt-bg td[data-default-bg="true"] {
+    background-color: #1e1e1e !important;
+}
+
+body.alt-bg td[data-default-color="true"][data-default-bg="true"]:not([data-black-bg="true"]) {
+    color: #cccccc !important;
+}
+
+/* Cells with black borders: flip border colors in dark mode while preserving widths/styles */
+body.alt-bg td[data-black-border="true"] {
+    border-top-color: rgb(255, 255, 255) !important;
+    border-right-color: rgb(255, 255, 255) !important;
+    border-bottom-color: rgb(255, 255, 255) !important;
+    border-left-color: rgb(255, 255, 255) !important;
+}
+
+/* Merged cells styling - FIXED VERTICAL ALIGNMENT */
+td.merged-cell {
+    position: relative;
+    padding: 0;
+    z-index: 3;
+}
+
+td.merged-cell .cell-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2px 4px;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+/* Override vertical alignment for merged cells */
+td.merged-cell[style*="vertical-align: top"] .cell-content {
+    align-items: flex-start;
+}
+
+td.merged-cell[style*="vertical-align: bottom"] .cell-content {
+    align-items: flex-end;
+}
+
+td.merged-cell[style*="vertical-align: middle"] .cell-content {
+    align-items: center;
+}
+
+/* Override text alignment for merged cells */
+td.merged-cell[style*="text-align: left"] .cell-content {
+    justify-content: flex-start;
+    text-align: left;
+}
+
+td.merged-cell[style*="text-align: right"] .cell-content {
+    justify-content: flex-end;
+    text-align: right;
+}
+
+td.merged-cell[style*="text-align: center"] .cell-content {
+    justify-content: center;
+    text-align: center;
+}
+
+/* Selection styles - Excel-like */
+td.selected {
+    box-shadow: inset 0 0 0 1000px var(--selection-bg) !important;
+    outline: 1px solid var(--selection-border) !important;
+    outline-offset: -1px;
+    z-index: 4;
+}
+
+td:hover {
+    box-shadow: inset 0 0 0 1000px var(--row-hover-bg) !important;
+}
+
+td.selected:hover {
+    box-shadow: inset 0 0 0 1000px var(--selection-bg), inset 0 0 0 1000px var(--row-hover-bg) !important;
+}
+
+body.alt-bg td:hover {
+    box-shadow: inset 0 0 0 1000px var(--row-hover-bg) !important;
+}
+
+body.alt-bg td.selected:hover {
+    box-shadow: inset 0 0 0 1000px var(--selection-bg), inset 0 0 0 1000px var(--row-hover-bg) !important;
+}
+
+td.active-cell {
+    outline: 2px solid var(--selection-border) !important;
+    outline-offset: -2px;
+    box-shadow: none !important;
+    z-index: 5;
+}
+
+td.active-cell::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 6px;
+    height: 6px;
+    background: var(--selection-border);
+    border: 1px solid var(--bg-color);
+    z-index: 6;
+}
+
+/* Row/Column selection */
+td.column-selected,
+th.column-selected {
+    box-shadow: inset 0 0 0 1000px var(--selection-bg) !important;
+}
+
+td.row-selected,
+th.row-selected {
+    box-shadow: inset 0 0 0 1000px var(--selection-bg) !important;
+}
+
+td.column-selected:hover,
+td.row-selected:hover {
+    box-shadow: inset 0 0 0 1000px var(--selection-bg), inset 0 0 0 1000px var(--row-hover-bg) !important;
+}
+
+/* Copy animation */
+@keyframes copyFlash {
+    0% { box-shadow: none; }
+    50% { box-shadow: inset 0 0 0 1000px rgba(26, 232, 71, 0.3) !important; }
+    100% { box-shadow: none; }
+}
+
+body.alt-bg td.copying {
+    animation: copyFlashDark 0.2s ease-in-out;
+}
+
+@keyframes copyFlashDark {
+    0% { box-shadow: none; }
+    50% { box-shadow: inset 0 0 0 1000px rgba(26, 232, 71, 0.3) !important; }
+    100% { box-shadow: none; }
+}
+
+td.copying {
+    animation: copyFlash 0.2s ease-in-out;
+}
+
+/* Selection info */
+.selection-info {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--text-color);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: none;
+    z-index: 1001;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+body.alt-bg .selection-info {
+    background: rgba(30, 30, 30, 0.9);
+    color: #f5f5f7;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Corner cell */
+th.corner-cell {
+    background-color: var(--header-bg);
+    cursor: pointer;
+    width: var(--row-header-width);
+    min-width: var(--row-header-width);
+    max-width: var(--row-header-width);
+}
+
+/* Cell content wrapper */
+.cell-content {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: none;
+    pointer-events: none;
+    position: relative;
+    z-index: 2;
+}
+
+::selection {
+    background-color: transparent;
+}
+
+::-moz-selection {
+    background-color: transparent;
+}
+
+/* First row header styling when enabled */
+body.first-row-as-header tbody tr.header-row td {
+    font-weight: 700;
+}
+
+/* Sticky header row (first data row) when enabled */
+body.sticky-header-enabled tbody tr.header-row td,
+body.sticky-header-enabled tbody tr.header-row th {
+    position: sticky;
+    top: 34px;
+    /* sits below column headers */
+    z-index: 10;
+}
+
+/* Ensure the left row header cell of the sticky header row stays below the column headers and stays on the left */
+body.sticky-header-enabled tbody tr.header-row th.row-header {
+    position: sticky;
+    top: 34px;
+    /* below column headers */
+    left: 0;
+    /* stay pinned to left */
+    z-index: 30;
+    /* higher so it's above other cells */
+    background-color: var(--header-bg);
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    flex-direction: column;
+}
+
+body.alt-bg .loading-overlay {
+    background-color: rgba(33, 33, 33, 0.9);
+}
+
+.loading-overlay.hidden {
+    display: none;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #2196f3;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+    font-size: 16px;
+    color: #333;
+}
+
+body.alt-bg .loading-text {
+    color: #cccccc;
+}
+
+/* Tooltip styles */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    background-color: rgb(231, 248, 255);
+    color: rgb(0, 0, 0);
+    text-align: center;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1;
+    top: 130%;
+    left: 50%;
+    margin-left: -125px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: normal;
+    line-height: 1.5;
+    width: 250px;
+}
+
+.tooltip .tooltiptext span {
+    color: #0066cc;
+}
+
+.tooltip:hover .tooltiptext {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Resize indicator */
+.resize-indicator {
+    position: fixed;
+    background: rgba(26, 115, 232, 0.8);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    z-index: 1002;
+    pointer-events: none;
+    display: none;
+}

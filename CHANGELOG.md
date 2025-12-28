@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.5.4 - XLSX Editing & UI Improvements
+- **New Name & Description**:
+  - Extension renamed from `XLSX Viewer & CSV Editor` to `XLSX & CSV Editor` to better reflect its dual functionality.
+  - Updated extension description to highlight both XLSX viewing/editing and CSV editing capabilities.
+- **XLSX Editing & Toolbar (New approach)**:
+  - Introduced **in-webview table editing** for XLSX files: toggle **Edit** to make changes, then **Save** to persist changes back to the `.xlsx` file or **Cancel** to discard.
+  - **Implementation detail**: edits are applied in the webview and written to disk using ExcelJS; the extension attempts to preserve formatting and merged cells where possible.
+  - Added **Undo/Redo** support and keyboard shortcuts for edit mode (Ctrl+S / Ctrl+Z / Ctrl+Y / Enter).
+  - **Toolbar & Settings parity**: toolbar controls and the Settings panel (header toggle, sticky header, sticky toolbar, hyperlink preview) were added to XLSX views to match CSV editor UX.
+  - **UX improvements**: refined toolbar responsiveness, consistent sticky headers, and polished visual styles across XLSX and CSV editors.
+
+
+
 ## v1.5.3 - UI Polish & Settings UX
 - **UI Polish & Settings UX**:
   - Redesigned **Settings panel** with backdrop blur, smoother rounded corners, grouped checkboxes, and responsive Cancel button that wraps on small screens.

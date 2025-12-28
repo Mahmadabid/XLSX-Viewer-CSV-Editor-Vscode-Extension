@@ -1,8 +1,8 @@
 {
   "name": "xlsx-viewer",
-  "displayName": "XLSX Viewer & CSV Editor",
-  "description": "View XLSX files with colors, fonts and styles from excel files with multiple sheet support and view with table view and edit CSV files in VS Code. This is an open-source project.",
-  "version": "1.5.3",
+  "displayName": "XLSX & CSV Editor",
+  "description": "View and edit XLSX files with colors, fonts and styles from Excel files (supporting in-table editing), and view and edit CSV files in VS Code. This is an open-source project.",
+  "version": "1.5.4",
   "publisher": "muhammad-ahmad",
   "engines": {
     "vscode": "^1.60.0"
@@ -18,6 +18,10 @@
     "spreadsheet",
     "viewer",
     "editor",
+    "xlsx-editor",
+    "table-edit",
+    "toolbar",
+    "settings",
     "multiple sheets",
     "style",
     "fonts",
@@ -32,7 +36,7 @@
     "customEditors": [
       {
         "viewType": "xlsxViewer.xlsx",
-        "displayName": "XLSX Viewer",
+        "displayName": "XLSX Viewer & Editor",
         "selector": [
           {
             "filenamePattern": "*.xlsx"
@@ -41,7 +45,7 @@
       },
       {
         "viewType": "xlsxViewer.csv",
-        "displayName": "CSV Viewer",
+        "displayName": "CSV Viewer & Editor",
         "selector": [
           {
             "filenamePattern": "*.csv"
@@ -67,7 +71,7 @@
       ]
     },
     "configuration": {
-      "title": "XLSX Viewer & CSV Editor",
+      "title": "XLSX & CSV Editor",
       "properties": {
         "xlsxViewer.csv.firstRowIsHeader": {
           "type": "boolean",
@@ -83,6 +87,26 @@
           "type": "boolean",
           "default": true,
           "description": "Keep the CSV toolbar sticky at the top of the editor."
+        },
+        "xlsxViewer.xlsx.stickyToolbar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Keep the XLSX toolbar sticky at the top of the editor."
+        },
+        "xlsxViewer.xlsx.firstRowIsHeader": {
+          "type": "boolean",
+          "default": false,
+          "description": "Treat the first row of XLSX files as a header (makes the first row bold)."
+        },
+        "xlsxViewer.xlsx.stickyHeader": {
+          "type": "boolean",
+          "default": false,
+          "description": "Make the first row sticky when 'First row is header' is enabled."
+        },
+        "xlsxViewer.xlsx.hyperlinkPreview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a hover tooltip for hyperlinks with Open/Copy actions."
         }
       }
     }
@@ -115,6 +139,7 @@
     "vscode-test": "^1.5.2"
   },
   "dependencies": {
+    "@wolf-table/table": "^0.0.3",
     "exceljs": "^4.3.0"
   },
   "license": "MIT",

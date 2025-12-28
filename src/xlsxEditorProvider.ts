@@ -1,6 +1,6 @@
 ﻿import * as vscode from 'vscode';
 import * as Excel from 'exceljs';
-import { convertARGBToRGBA, isShadeOfBlack } from './xlsx/xlsxUtilities';
+import { convertARGBToRGBA, isShadeOfBlack, isShadeOfWhite } from './xlsx/xlsxUtilities';
 
 export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
     constructor(private readonly context: vscode.ExtensionContext) { }
@@ -412,7 +412,10 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     rowNumber: r,
                     // Add data attributes for proper color handling
                     isDefaultColor: cellStyle._isDefaultColor || false,
+                    // True when cell had no explicit background defined in the file
                     hasDefaultBg: !cellStyle.backgroundColor,
+                    // True when the cell had an explicit white (or near-white) background
+                    hasWhiteBackground: cellStyle._hasWhiteBackground || false,
                     hasBlackBorder: cellStyle._hasBlackBorder || false,
                     hasBlackBackground: cellStyle._hasBlackBackground || false,
                     originalColor: cellStyle.color || 'rgb(0, 0, 0)',
@@ -545,6 +548,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         let isDefaultColor = false;
         let hasBlackBorder = false;
         let hasBlackBackground = false;
+        let hasWhiteBackground = false;
 
         // Background color
         if (cell.fill && cell.fill.type === 'pattern' && (cell.fill as any).fgColor) {
@@ -554,6 +558,8 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 style.backgroundColor = bgColor;
                 // Check if background is black or shade of black - be very strict
                 hasBlackBackground = isShadeOfBlack(bgColor);
+                // Check if background is white or shade of white
+                hasWhiteBackground = isShadeOfWhite(bgColor);
             }
         }
 
@@ -562,7 +568,10 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
             if (cell.font.color && cell.font.color.argb) {
                 const fontColor = convertARGBToRGBA(cell.font.color.argb);
                 style.color = fontColor;
-                // Don't set isDefaultColor for custom colors
+                // If it's a shade of black, we can treat it as default color for theme switching
+                if (isShadeOfBlack(fontColor)) {
+                    isDefaultColor = true;
+                }
             } else {
                 // No custom font color set, defaults to black
                 style.color = 'rgb(0, 0, 0)';
@@ -661,6 +670,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         style._isDefaultColor = isDefaultColor;
         style._hasBlackBorder = hasBlackBorder;
         style._hasBlackBackground = hasBlackBackground;
+        style._hasWhiteBackground = hasWhiteBackground;
 
         return style;
     }

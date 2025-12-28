@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.5.5 - Dark Mode Fixes
+- **Dark Mode Fixes**:
+  - Corrected text color in dark mode for XLSX views to ensure readability.
+  - Updated CSS rules to maintain consistent appearance across different themes.
+  - Ensured that default cell colors adapt properly in dark mode without losing visibility.
+
 ## v1.5.4 - XLSX Editing & UI Improvements
 - **New Name & Description**:
   - Extension renamed from `XLSX Viewer & CSV Editor` to `XLSX & CSV Editor` to better reflect its dual functionality.

@@ -27,3 +27,18 @@ export function isShadeOfBlack(color: string): boolean {
     // ALL components must be below threshold to be considered "black"
     return r <= threshold && g <= threshold && b <= threshold;
 }
+
+export function isShadeOfWhite(color: string): boolean {
+    // Parse RGB/RGBA values
+    const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+    if (!match) return false;
+
+    const r = parseInt(match[1]);
+    const g = parseInt(match[2]);
+    const b = parseInt(match[3]);
+
+    // Consider a color as "shade of white" if ALL RGB values are very high
+    const threshold = 240; // Very light colors only
+
+    return r >= threshold && g >= threshold && b >= threshold;
+}

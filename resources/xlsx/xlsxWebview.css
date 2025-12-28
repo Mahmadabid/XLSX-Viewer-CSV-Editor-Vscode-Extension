@@ -423,7 +423,7 @@ table {
 }
 
 body.alt-bg table {
-    background-color: #1e1e1e;
+    background-color: var(--bg-color);
 }
 
 th,
@@ -569,11 +569,17 @@ td[style*="border"] {
 }
 
 body.alt-bg td[data-default-bg="true"] {
-    background-color: #1e1e1e !important;
+    background-color: var(--bg-color) !important;
 }
 
-body.alt-bg td[data-default-color="true"][data-default-bg="true"]:not([data-black-bg="true"]) {
-    color: #cccccc !important;
+/* Cells with an explicit white background in the workbook — force pure black bg + white text in dark mode */
+body.alt-bg td[data-white-bg="true"] {
+    background-color: #000000 !important;
+    color: #e4e4e4 !important;
+}
+
+body.alt-bg td[data-default-color="true"][data-default-bg="true"] {
+    color: var(--text-color) !important;
 }
 
 /* Cells with black borders: flip border colors in dark mode while preserving widths/styles */

@@ -206,6 +206,7 @@
                     html += ' data-rownum="' + cellData.rowNumber + '"';
                     html += ' data-colnum="' + cellData.colNumber + '"';
                     if (cellData.hasDefaultBg) html += ' data-default-bg="true"';
+                    if (cellData.hasWhiteBackground) html += ' data-white-bg="true"';
                     if (cellData.isDefaultColor) html += ' data-default-color="true"';
                     if (cellData.hasBlackBorder) html += ' data-black-border="true"';
                     if (cellData.hasBlackBackground) html += ' data-black-bg="true"';
@@ -754,13 +755,14 @@
     }
 
     function invertColor(color) {
-        const match = String(color || '').match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        const match = String(color || '').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
         if (!match) return color;
 
         const r = 255 - parseInt(match[1], 10);
         const g = 255 - parseInt(match[2], 10);
         const b = 255 - parseInt(match[3], 10);
-        return `rgb(${r}, ${g}, ${b})`;
+        const a = match[4] ? match[4] : '1';
+        return `rgba(${r}, ${g}, ${b}, ${a})`;
     }
 
     function initializeSelection() {
@@ -1476,17 +1478,6 @@
                     if (lightIcon) lightIcon.style.display = 'none';
                     if (darkIcon) darkIcon.style.display = 'block';
                 }
-
-                // Handle text inversion for black backgrounds
-                const blackBgCells = document.querySelectorAll('td[data-black-bg="true"]');
-                blackBgCells.forEach(cell => {
-                    const originalColor = cell.getAttribute('data-original-color');
-                    if (isDarkMode) {
-                        cell.style.color = invertColor(originalColor);
-                    } else {
-                        cell.style.color = originalColor;
-                    }
-                });
             });
         }
 

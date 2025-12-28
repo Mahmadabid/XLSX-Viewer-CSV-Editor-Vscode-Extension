@@ -12,7 +12,7 @@
     --accent-bg: rgba(0, 122, 255, 0.1);
     --selection-border: #007aff;
     --selection-bg: rgba(0, 122, 255, 0.18);
-    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --button-bg: #007aff;
     --button-text: #ffffff;
     --button-hover: #0062cc;
@@ -46,7 +46,8 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
-    overflow-x: auto;
+    overflow: hidden;
+    /* Scroll the wrapper, not the body */
     font-size: 13px;
     line-height: 1.4;
     -webkit-font-smoothing: antialiased;
@@ -84,7 +85,8 @@ table {
     border-spacing: 0;
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    overflow: hidden;
+    overflow: visible;
+    /* Allow sticky elements to escape the table */
     /* For rounded corners on the table */
 }
 
@@ -115,16 +117,35 @@ body.expanded-mode td {
 th {
     background-color: var(--header-bg);
     font-weight: 600;
-    position: sticky;
-    top: 0;
-    z-index: 10;
     color: var(--text-color);
     border-bottom: 2px solid var(--border-color);
     /* Slightly thicker bottom border for headers */
 }
 
-td:nth-child(1),
-th:nth-child(1) {
+/* Column headers stick to the top only */
+th.col-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--header-bg);
+}
+
+.table-scroll {
+    max-height: calc(100vh - 54px);
+    overflow: auto;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* When the toolbar is not sticky, let the table use more vertical space to avoid a gap */
+body:not(.sticky-toolbar-enabled) .table-scroll {
+    max-height: calc(100vh - 6px);
+}
+
+/* Row headers (first column) */
+tbody th:first-child,
+tbody td:first-child,
+thead th:first-child {
     width: 30px !important;
     min-width: 30px !important;
     background-color: var(--header-bg);
@@ -135,32 +156,157 @@ th:nth-child(1) {
     position: sticky;
     left: 0;
     z-index: 20;
-    /* Higher z-index to stay on top of other cells */
     border-right: 2px solid var(--border-color);
 }
 
-/* Fix for top-left corner index */
-th:nth-child(1) {
-    z-index: 30;
+/* Ensure .row-header class is explicitly sticky (covers generated tables) */
+th.row-header {
+    position: sticky;
+    left: 0;
+    z-index: 20;
 }
 
-.button-container {
-    margin-top: 0px;
-    margin-bottom: 3px;
-    display: flex;
-    gap: 12px;
-    position: fixed;
+/* Fix for top-left corner index */
+/* Make the corner cell stick to top-left and sit above other headers */
+thead th:first-child {
+    position: sticky;
     top: 0;
     left: 0;
-    width: 100%;
-    box-sizing: border-box;
-    overflow-x: auto;
-    overflow-y: visible !important;
-    /* Critical: allow tooltips to pop out */
-    white-space: nowrap;
-    padding: 6px 12px;
+    z-index: 30;
+    background-color: var(--header-bg);
+}
+
+/* toolbar moved to consolidated block near end of file */
+
+/* When toolbar is set to non-sticky by setting, make it flow with content */
+.toolbar.not-sticky {
+    position: relative;
+}
+
+/* When settings panel is open, keep toolbar on one line and allow horizontal scrolling */
+.toolbar.settings-open {
+    flex-wrap: nowrap;
     align-items: center;
-    z-index: 10000;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+/* settings-panel styling moved to consolidated block near end of file */
+
+.settings-panel.hidden {
+    display: none !important;
+}
+
+.settings-panel.floating {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    z-index: 10001;
+}
+
+/* Make sure when floating we can wrap into column layout on narrow screens */
+.settings-panel.floating {
+    flex-wrap: wrap;
+}
+
+/* setting-item styles consolidated at end of file */
+
+.toggle-button.small {
+    height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+    max-width: 120px;
+    min-width: 72px;
+    flex-shrink: 0;
+}
+
+/* Make the settings Cancel button match the main toolbar (bluish) and cap its width */
+#settingsCancelButton {
+    max-width: 70px !important;
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
+}
+
+/* Ensure the Cancel button uses the same hover/active interactions as other toolbar buttons */
+#settingsCancelButton:hover {
+    background-color: var(--button-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 122, 255, 0.25);
+}
+
+#settingsCancelButton:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Removing the media query that forced a column layout, 
+   allowing flex-wrap to handle it naturally item-by-item */
+@media (max-width: 640px) {
+    .settings-panel {
+        flex-direction: row;
+        /* Keep as row so wrap works item-by-item */
+    }
+}
+
+/* First row header styling when enabled */
+body.first-row-as-header tbody tr.header-row td {
+    font-weight: 700;
+    background-color: var(--header-bg);
+}
+
+/* Sticky header row (first data row) when enabled */
+body.sticky-header-enabled tbody tr.header-row td,
+body.sticky-header-enabled tbody tr.header-row th {
+    position: sticky;
+    top: 34px;
+    /* sits below column headers */
+    z-index: 10;
+}
+
+/* Ensure the left row header cell of the sticky header row stays below the column headers and stays on the left */
+body.sticky-header-enabled tbody tr.header-row th.row-header {
+    position: sticky;
+    top: 34px;
+    /* below column headers */
+    left: 0;
+    /* stay pinned to left */
+    z-index: 30;
+    /* higher so it's above other cells */
+    background-color: var(--header-bg);
+}
+
+/* If toolbar is not sticky, hide the header blur element (to avoid empty fixed bar) */
+body:not(.sticky-toolbar-enabled) .header-background {
+    display: none;
+}
+
+/* If toolbar is not sticky, remove the top spacing reserved for the fixed header so content sits flush */
+body:not(.sticky-toolbar-enabled) {
+    padding-top: 0px;
+}
+
+/* If toolbar is not sticky, ensure toolbar flows */
+body:not(.sticky-toolbar-enabled) .toolbar {
+    position: relative;
+}
+
+/* Expanded toolbar states */
+.toolbar.expanded-toolbar {
+    padding: 12px 18px;
+    gap: 16px;
+    overflow-x: auto;
+    white-space: nowrap;
+    align-items: center;
+}
+
+.toolbar.expanded-toolbar .settings-panel {
+    width: 100%;
+}
+
+/* If the toolbar is not sticky, ensure the expanded toolbar still flows */
+body:not(.sticky-toolbar-enabled) .toolbar.expanded-toolbar {
+    position: relative;
 }
 
 .header-background {
@@ -179,7 +325,7 @@ th:nth-child(1) {
     /* Let clicks pass through to buttons */
 }
 
-.button-container img {
+.toolbar img {
     flex-shrink: 0;
     max-width: none !important;
     width: 120px;
@@ -188,7 +334,7 @@ th:nth-child(1) {
     display: inline-block;
 }
 
-.button-container svg {
+.toolbar svg {
     flex-shrink: 0;
     width: 16px;
     /* Icon width */
@@ -225,11 +371,8 @@ th:nth-child(1) {
     box-shadow: none;
 }
 
-.toggle-button svg {
-    width: 16px;
-    height: 16px;
-    stroke: currentColor;
-}
+/* icon-only button styles consolidated at end of file */
+
 
 td {
     background-color: var(--bg-color);
@@ -255,19 +398,20 @@ td span.cell-content {
 
 .tooltip .tooltiptext {
     visibility: hidden;
-    width: 250px;
+    width: 300px;
+    max-width: calc(100vw - 32px);
     background-color: var(--tooltip-bg);
     color: var(--tooltip-text);
-    text-align: center;
+    text-align: left;
     border-radius: 8px;
-    padding: 12px;
-    position: fixed;
-    /* Fixed to bypass container clipping */
+    padding: 10px;
+    position: absolute;
+    /* Position relative to the .tooltip container so it appears near the element */
     z-index: 100000 !important;
-    /* Extremely high z-index */
-    top: 45px;
-    right: 15px;
-    /* Positioned relative to viewport right */
+    /* Keep a high z-index */
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
     opacity: 0;
     transition: opacity 0.2s ease, transform 0.2s ease;
     white-space: normal;
@@ -276,13 +420,13 @@ td span.cell-content {
     border: 1px solid var(--border-color);
     font-size: 12px;
     pointer-events: none;
-    transform: translateY(-10px);
 }
 
 .tooltip:hover .tooltiptext {
     visibility: visible;
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
 }
 
 .tooltip .tooltiptext span {
@@ -392,7 +536,7 @@ th.row-header {
 
 th.col-header:hover,
 th.row-header:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgb(210, 210, 210);
 }
 
 body.alt-bg th.col-header:hover,
@@ -538,4 +682,195 @@ body.alt-bg .toast-notification {
     font-size: 15px;
     font-weight: 500;
     white-space: nowrap;
+}
+
+/* Specific fix for Toolbar scrollbar position */
+.toolbar {
+    height: 48px;
+    /* Fixed height to match header-background */
+    margin-top: 0;
+    margin-bottom: 0;
+    display: flex;
+    gap: 12px;
+    /* Default to flowing layout; stickiness controlled by body class */
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding: 0 12px;
+    /* Padding adjusted */
+    align-items: center;
+    z-index: 10000;
+}
+
+/* Pin toolbar only when setting enabled */
+body.sticky-toolbar-enabled .toolbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+/* --- Settings Button (Icon Only) --- */
+.toggle-button.icon-only {
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.toggle-button.icon-only svg {
+    margin: 0;
+}
+
+/* --- Settings Panel Refinement --- */
+.settings-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+    /* Pushes button away from items */
+
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+    color: var(--text-color);
+    padding: 12px 20px;
+    border-radius: 12px;
+    /* Smoother corners */
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+body.alt-bg .settings-panel {
+    background: rgba(44, 44, 46, 0.8);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Container for checkboxes to keep them together */
+.settings-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.setting-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+/* Checkbox (Slightly larger and cleaner) */
+.setting-item input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-color);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.setting-item input[type="checkbox"]:checked {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.setting-item input[type="checkbox"]:checked::after {
+    content: "✓";
+    position: absolute;
+    color: white;
+    font-size: 11px;
+    left: 3px;
+    top: -1px;
+}
+
+/* Disabled state for checkboxes: visually muted and non-interactive */
+.setting-item input[type="checkbox"]:disabled {
+    /* Keep same sizing/shape but make it look disabled */
+    cursor: not-allowed;
+    opacity: 0.6;
+    background-color: transparent;
+    border-color: var(--border-color);
+    box-shadow: none;
+}
+
+/* Ensure no checkmark appears if somehow checked while disabled */
+.setting-item input[type="checkbox"]:disabled::after {
+    content: none !important;
+}
+
+/* Dim the label text and prevent pointer cursor when disabled */
+.setting-item input[type="checkbox"]:disabled + span {
+    opacity: 0.65;
+    cursor: not-allowed;
+    color: var(--text-color);
+}
+
+/* Dark mode tweaks for disabled label */
+body.alt-bg .setting-item input[type="checkbox"]:disabled + span {
+    color: var(--text-color);
+    opacity: 0.65;
+}
+
+/* Handle the Cancel Button Wrapping */
+#settingsCancelButton {
+    max-width: 70px;
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
+    border: none;
+    font-weight: 500;
+    padding: 0 10px;
+    height: 30px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.25,0.1,0.25,1);
+}
+
+#settingsCancelButton:hover {
+    background-color: var(--button-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 122, 255, 0.25);
+}
+
+#settingsCancelButton:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Logic for "Cancel button on next line when screen shrinks" */
+@media (max-width: 500px) {
+    .settings-panel {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .settings-group {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    #settingsCancelButton {
+        width: 100%;
+        max-width: none;
+        /* Spans full width on mobile */
+        justify-content: center;
+    }
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.5.3 - UI Polish & Settings UX
+- **UI Polish & Settings UX**:
+  - Redesigned **Settings panel** with backdrop blur, smoother rounded corners, grouped checkboxes, and responsive Cancel button that wraps on small screens.
+  - Settings panel features:
+    - **Header Row**: toggle the first row to be treated as header (bold first row).
+    - **Sticky Header**: keep the first row sticky when header is enabled.
+    - **Sticky Toolbar**: keep the toolbar fixed at the top of the editor.
+
 ## v1.5.2 - Premium UX Refinements & Bug Fixes
 - **Premium CSV Editor UX**:
   - Added **Undo (Ctrl+Z)** and **Redo (Ctrl+Y)** functionality in table edit mode.

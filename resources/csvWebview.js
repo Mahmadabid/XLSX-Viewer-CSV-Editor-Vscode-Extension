@@ -405,7 +405,7 @@
 
             table.style.tableLayout = 'auto';
             const ctx = document.createElement('canvas').getContext('2d');
-            ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+            ctx.font = '13px "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
             const rowsToCheck = table.querySelectorAll('tbody tr');
             const limit = Math.min(rowsToCheck.length, 50);
@@ -788,7 +788,7 @@
         });
 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('#csv-table') && !e.target.closest('.button-container')) clearSelection();
+            if (!e.target.closest('#csv-table') && !e.target.closest('.toolbar')) clearSelection();
         });
     }
 
@@ -807,6 +807,16 @@
             }
             applyEditModeToCells();
             initializeSelection();
+            // Ensure toolbar scrollbar matches size after DOM changes
+            setTimeout(syncToolbarScroll, 50);
+
+            // Re-apply cached settings after rows are added so header/sticky behavior takes effect
+            try { applySettings(currentSettings, false); } catch (e) { /* ignore */ }
+        } else if (m.command === 'initSettings' || m.command === 'settingsUpdated') {
+            // Apply incoming settings from the extension (persisted settings)
+            const settings = (m && m.settings) ? m.settings : {};
+            applySettings(settings, false);
+            setTimeout(syncToolbarScroll, 20);
         } else if (m.command === 'saveResult') {
             isSaving = false;
             setButtonsEnabled(true);
@@ -866,6 +876,317 @@
         });
     }
 
+    // Setup floating tooltips so they are visible even when the toolbar is scrollable
+    function setupFloatingTooltips() {
+        let activeTip = null;
+        let activeTrigger = null;
+
+        function positionTip(trigger, tip) {
+            if (!trigger || !tip) return;
+            // ensure tip is fixed so it escapes any scrollable container
+            tip.dataset.origPosition = tip.style.position || '';
+            tip.dataset.origLeft = tip.style.left || '';
+            tip.dataset.origTop = tip.style.top || '';
+            tip.dataset.origTransform = tip.style.transform || '';
+
+            tip.style.position = 'fixed';
+            tip.style.visibility = 'visible';
+            tip.style.opacity = '0';
+            tip.style.pointerEvents = 'none';
+
+            // measure and place on next frame
+            requestAnimationFrame(() => {
+                const r = trigger.getBoundingClientRect();
+                const tr = tip.getBoundingClientRect();
+                let left = r.left + r.width / 2 - tr.width / 2;
+                left = Math.max(8, Math.min(left, window.innerWidth - tr.width - 8));
+                let top = r.bottom + 8;
+                // flip up if not enough space below
+                if (top + tr.height > window.innerHeight - 8) {
+                    top = r.top - tr.height - 8;
+                }
+                tip.style.left = left + 'px';
+                tip.style.top = top + 'px';
+                tip.style.transform = 'translateX(0) translateY(0)';
+                tip.style.opacity = '1';
+                tip.style.pointerEvents = 'auto';
+                activeTip = tip;
+                activeTrigger = trigger;
+            });
+
+            // keep tooltip visible if mouse enters the floating tip
+            function onTipEnter() {
+                // noop, keep visible
+            }
+            function onTipLeave() {
+                hideTip(trigger);
+            }
+            tip.addEventListener('mouseenter', onTipEnter, { once: true });
+            tip.addEventListener('mouseleave', onTipLeave, { once: true });
+        }
+
+        function hideTip(trigger) {
+            const tip = trigger.querySelector('.tooltiptext');
+            if (!tip) return;
+            tip.style.opacity = '0';
+            tip.style.pointerEvents = 'none';
+            tip.style.visibility = '';
+            tip.style.left = tip.dataset.origLeft || '';
+            tip.style.top = tip.dataset.origTop || '';
+            tip.style.position = tip.dataset.origPosition || '';
+            tip.style.transform = tip.dataset.origTransform || '';
+            activeTip = null;
+            activeTrigger = null;
+        }
+
+        document.addEventListener('mouseover', (e) => {
+            const t = e.target.closest('.tooltip');
+            if (!t) return;
+            const tip = t.querySelector('.tooltiptext');
+            if (!tip) return;
+            positionTip(t, tip);
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const t = e.target.closest('.tooltip');
+            if (!t) return;
+            // If mouse moved into the floating tip, don't hide
+            const rel = e.relatedTarget;
+            if (rel) {
+                if (t.contains(rel)) return;
+                if (activeTip && activeTip.contains(rel)) return;
+            }
+            hideTip(t);
+        });
+
+        // Reposition on resize/scroll while tooltip is visible
+        window.addEventListener('resize', () => {
+            if (activeTip && activeTrigger) positionTip(activeTrigger, activeTip);
+        });
+        window.addEventListener('scroll', (ev) => {
+            if (activeTip && activeTrigger) positionTip(activeTrigger, activeTip);
+        }, true);
+    }
+
+    setupFloatingTooltips();
+
+    // Sync toolbar hidden scroll area with visible scrollbar
+    function syncToolbarScroll() {
+        const area = $('buttonScrollArea');
+        const bar = $('buttonScrollbar');
+        const inner = $('scrollInner');
+        if (!area || !bar || !inner) return;
+        // Set inner width to match the scrollable width of the button area
+        inner.style.width = area.scrollWidth + 'px';
+        // Keep the visible scrollbar at the same position
+        bar.scrollLeft = area.scrollLeft;
+
+        // Wire listeners once
+        if (!area._scrollWire) {
+            let syncing = false;
+            area.addEventListener('scroll', () => {
+                if (syncing) return;
+                syncing = true;
+                bar.scrollLeft = area.scrollLeft;
+                setTimeout(() => (syncing = false), 20);
+            });
+            bar.addEventListener('scroll', () => {
+                if (syncing) return;
+                syncing = true;
+                area.scrollLeft = bar.scrollLeft;
+                setTimeout(() => (syncing = false), 20);
+            });
+            area._scrollWire = true;
+        }
+    }
+
+    // --- Settings UI and behavior ---
+    // Keep the currently-applied settings so they can be re-applied after rows are inserted
+    let currentSettings = {};
+
+    function applySettings(settings, saveLocal = false) {
+        // cache latest settings
+        currentSettings = settings || {};
+        if (!settings) return;
+        // Toggle classes for visual changes
+        document.body.classList.toggle('first-row-as-header', !!settings.firstRowIsHeader);
+        document.body.classList.toggle('sticky-header-enabled', !!settings.stickyHeader);
+        document.body.classList.toggle('sticky-toolbar-enabled', !!settings.stickyToolbar);
+
+        // Update header / sticky behavior
+        // Bold first row when firstRowIsHeader is enabled
+        const table = $('csv-table');
+        if (table) {
+            const firstRow = table.querySelector('tbody tr');
+            if (firstRow) {
+                if (settings.firstRowIsHeader) {
+                    firstRow.classList.add('header-row');
+                } else {
+                    firstRow.classList.remove('header-row');
+                }
+            }
+        }
+
+        // Update toolbar stickiness and expansion
+        const container = document.querySelector('.toolbar');
+        const content = document.getElementById('content');
+        const scrollArea = document.querySelector('.table-scroll');
+        const headerBg = document.querySelector('.header-background');
+        if (container) {
+            if (settings.stickyToolbar) {
+                // Ensure toolbar is a top-level element so it can be fixed to the viewport
+                if (container.parentNode !== document.body) {
+                    if (content && content.parentNode) document.body.insertBefore(container, content);
+                    else document.body.appendChild(container);
+                }
+                container.classList.remove('not-sticky');
+                container.classList.add('expanded-toolbar');
+                if (headerBg) headerBg.style.display = '';
+            } else {
+                // Move toolbar into the scrollable table area so it scrolls with content
+                const target = scrollArea || content;
+                if (target && container.parentNode !== target) {
+                    target.insertBefore(container, target.firstChild);
+                }
+                container.classList.add('not-sticky');
+                container.classList.remove('expanded-toolbar');
+                if (headerBg) headerBg.style.display = 'none';
+            }
+        }
+
+        // update checkboxes if present
+        const chkH = $('chkHeaderRow');
+        const chkSH = $('chkStickyHeader');
+        const chkST = $('chkStickyToolbar');
+        if (chkH) chkH.checked = !!settings.firstRowIsHeader;
+        if (chkSH) chkSH.checked = !!settings.stickyHeader;
+        if (chkST) chkST.checked = !!settings.stickyToolbar;
+
+        // Sticky header only meaningful when first row is header
+        if (chkSH) chkSH.disabled = !chkH.checked;
+
+        // If asked, optionally persist the settings via message
+        if (saveLocal) {
+            vscode.postMessage({ command: 'updateSettings', settings });
+        }
+    }
+
+    function wireSettingsUI() {
+        const openBtn = $('openSettingsButton');
+        const panel = $('settingsPanel');
+        const chkH = $('chkHeaderRow');
+        const chkSH = $('chkStickyHeader');
+        const chkST = $('chkStickyToolbar');
+        const cancelBtn = $('settingsCancelButton');
+
+        if (!openBtn || !panel || !chkH || !chkSH || !chkST || !cancelBtn) return;
+
+        // Keep a snapshot to allow cancel to revert
+        let snapshot = null;
+
+        let repositionHandlers = null;
+
+        function repositionPanel() {
+            const container = document.querySelector('.toolbar');
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            // Position the panel immediately below the toolbar, centered within viewport with some margin
+            panel.style.position = 'fixed';
+            panel.style.left = Math.max(8, rect.left) + 'px';
+            panel.style.top = rect.bottom + 'px';
+            // Keep the panel width no larger than container and leave small margins on the sides
+            const maxWidth = Math.min(window.innerWidth - 16, rect.width);
+            panel.style.width = Math.max(280, maxWidth) + 'px';
+            panel.style.zIndex = '10001';
+        }
+
+        function openPanel() {
+            snapshot = { firstRowIsHeader: chkH.checked, stickyHeader: chkSH.checked, stickyToolbar: chkST.checked };
+            panel.classList.remove('hidden');
+            panel.classList.add('floating');
+            panel.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('settings-open');
+            // Expand toolbar area visually but do not affect document flow
+            const container = document.querySelector('.toolbar');
+            if (container) {
+                container.classList.add('settings-open');
+                container.classList.add('expanded-toolbar');
+            }
+
+            // Position panel as an overlay beneath the toolbar and keep it in place while scrolling/resizing
+            repositionPanel();
+            repositionHandlers = () => repositionPanel();
+            window.addEventListener('resize', repositionHandlers);
+            window.addEventListener('scroll', repositionHandlers, true);
+        }
+
+        function closePanel() {
+            panel.classList.add('hidden');
+            panel.classList.remove('floating');
+            panel.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('settings-open');
+            const container = document.querySelector('.toolbar');
+            if (container) {
+                container.classList.remove('settings-open');
+                // If stickyToolbar setting is off, also remove expanded-toolbar
+                const cfgSticky = chkST && chkST.checked;
+                if (!cfgSticky) container.classList.remove('expanded-toolbar');
+            }
+            // remove inline positioning
+            panel.style.position = '';
+            panel.style.left = '';
+            panel.style.top = '';
+            panel.style.width = '';
+            panel.style.zIndex = '';
+
+            if (repositionHandlers) {
+                window.removeEventListener('resize', repositionHandlers);
+                window.removeEventListener('scroll', repositionHandlers, true);
+                repositionHandlers = null;
+            }
+        }
+
+        openBtn.addEventListener('click', () => {
+            if (panel.classList.contains('hidden')) openPanel();
+            else closePanel();
+        });
+
+        // When a checkbox changes, apply immediately and persist
+        function onChange() {
+            const s = { firstRowIsHeader: !!chkH.checked, stickyHeader: !!chkSH.checked, stickyToolbar: !!chkST.checked };
+            // When firstRowIsHeader is unchecked, ensure sticky header is also disabled
+            if (!s.firstRowIsHeader) s.stickyHeader = false;
+            applySettings(s, true);
+        }
+
+        chkH.addEventListener('change', () => {
+            chkSH.disabled = !chkH.checked;
+            if (!chkH.checked) chkSH.checked = false;
+            onChange();
+        });
+        chkSH.addEventListener('change', onChange);
+        chkST.addEventListener('change', onChange);
+
+        cancelBtn.addEventListener('click', () => {
+            // Close panel without reverting changes
+            closePanel();
+        });
+
+        // Close panel if click outside
+        document.addEventListener('click', (e) => {
+            if (!panel.classList.contains('hidden')) {
+                if (!e.target.closest('.settings-panel') && !e.target.closest('#openSettingsButton')) {
+                    closePanel();
+                }
+            }
+        });
+    }
+
+    // --- End settings UI ---
+
+    setupFloatingTooltips();
+
     wireButtons();
+    wireSettingsUI();
     vscode.postMessage({ command: 'webviewReady' });
 })();

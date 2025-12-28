@@ -630,6 +630,11 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
         thead th:first-child {
             border-left: 1px solid #d0d0d0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 30;
+            background-color: #f0f0f0;
         }
 
         body.dark-mode th,
@@ -650,6 +655,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
         body.dark-mode thead th:first-child {
             border-left: 1px solid #464647;
+            z-index: 30;
         }
 
         /* Excel-like headers */
@@ -663,7 +669,6 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
             user-select: none;
             cursor: pointer;
             min-width: 25px;
-            position: relative;
             z-index: 1;
         }
 
@@ -680,12 +685,18 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
             text-align: center;
             white-space: nowrap;
             overflow: visible;
+            position: sticky;
+            left: 0;
+            z-index: 20;
         }
 
         th.col-header {
             height: 20px;
             min-height: 20px;
             min-width: 80px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         th.row-header:hover,
@@ -1128,7 +1139,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         function createTable(worksheetData) {
             const data = worksheetData.data;
             
-            let html = '<table>';
+            let html = '<div class="table-scroll"><table>';
             
             // Header row
             html += '<thead><tr>';
@@ -1198,7 +1209,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 html += '</tr>';
             });
             
-            html += '</tbody></table>';
+            html += '</tbody></table></div>';
             return html;
         }
 

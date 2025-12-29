@@ -89,7 +89,7 @@
         return $('tableContainer');
     }
 
-    function requestRows(start, end) {
+    function requestRows(start, end, timeout = 10000) {
         return new Promise((resolve) => {
             const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             pendingRequests.set(requestId, { resolve, start, end });
@@ -103,15 +103,17 @@
 
             setTimeout(() => {
                 if (pendingRequests.has(requestId)) {
+                    console.warn(`Request ${requestId} timed out for rows ${start}-${end}`);
                     pendingRequests.delete(requestId);
                     resolve([]);
                 }
-            }, 10000);
+            }, timeout);
         });
     }
 
     function requestAllRows() {
-        return requestRows(0, totalRows);
+        // Use longer timeout for full data fetch (30 seconds)
+        return requestRows(0, totalRows, 30000);
     }
 
     function createRowHtml(rowData, rowIndex) {
@@ -631,11 +633,23 @@
     // ===== Copy =====
 
     let isCopying = false;
+    let copyOperationTimeout = null;
+
+    function resetCopyState() {
+        isCopying = false;
+        if (copyOperationTimeout) {
+            clearTimeout(copyOperationTimeout);
+            copyOperationTimeout = null;
+        }
+    }
 
     async function copySelectionToClipboard() {
-        if (isCopying) return;
+        // Prevent duplicate operations but with a safety check
+        if (isCopying) {
+            console.warn('Copy operation already in progress');
+            return;
+        }
 
-        // Check if we have column or row selection (need to fetch all data)
         const hasFullColumnSelection = selectedColumnIndices.size > 0;
         const hasFullRowSelection = selectedRowIndices.size > 0;
 
@@ -644,6 +658,15 @@
         }
 
         isCopying = true;
+
+        // Safety timeout - reset state after 60 seconds max to prevent permanent lock
+        copyOperationTimeout = setTimeout(() => {
+            if (isCopying) {
+                console.warn('Copy operation timed out, resetting state');
+                resetCopyState();
+                showToast('Copy timed out');
+            }
+        }, 60000);
 
         try {
             showToast('Copying...');
@@ -654,17 +677,27 @@
                 // Need to fetch all rows for complete copy
                 const allRows = await requestAllRows();
 
-                // Cache all fetched rows
-                allRows.forEach((row, i) => {
-                    rowCache.set(i, row);
-                });
+                // Validate we got data back - don't corrupt cache with empty data
+                if (!allRows || allRows.length === 0) {
+                    showToast('Failed to fetch data');
+                    return;
+                }
+
+                // Only cache if we got the expected amount of data
+                if (allRows.length >= totalRows * 0.9) { // Allow some tolerance
+                    allRows.forEach((row, i) => {
+                        rowCache.set(i, row);
+                    });
+                }
+
+                const rowCount = allRows.length;
 
                 if (hasFullColumnSelection && !hasFullRowSelection) {
                     // Copy entire columns
                     const sortedCols = Array.from(selectedColumnIndices).sort((a, b) => a - b);
 
-                    for (let r = 0; r < totalRows; r++) {
-                        const rowData = rowCache.get(r) || [];
+                    for (let r = 0; r < rowCount; r++) {
+                        const rowData = allRows[r] || [];
                         const lineParts = sortedCols.map(c => rowData[c] || '');
                         outputLines.push(lineParts.join('\t'));
                     }
@@ -673,12 +706,14 @@
                     const sortedRows = Array.from(selectedRowIndices).sort((a, b) => a - b);
 
                     for (const r of sortedRows) {
-                        const rowData = rowCache.get(r) || [];
-                        const lineParts = [];
-                        for (let c = 0; c < columnCount; c++) {
-                            lineParts.push(rowData[c] || '');
+                        if (r < rowCount) {
+                            const rowData = allRows[r] || [];
+                            const lineParts = [];
+                            for (let c = 0; c < columnCount; c++) {
+                                lineParts.push(rowData[c] || '');
+                            }
+                            outputLines.push(lineParts.join('\t'));
                         }
-                        outputLines.push(lineParts.join('\t'));
                     }
                 } else {
                     // Both rows and columns selected - intersection
@@ -686,18 +721,25 @@
                     const sortedCols = Array.from(selectedColumnIndices).sort((a, b) => a - b);
 
                     for (const r of sortedRows) {
-                        const rowData = rowCache.get(r) || [];
-                        const lineParts = sortedCols.map(c => rowData[c] || '');
-                        outputLines.push(lineParts.join('\t'));
+                        if (r < rowCount) {
+                            const rowData = allRows[r] || [];
+                            const lineParts = sortedCols.map(c => rowData[c] || '');
+                            outputLines.push(lineParts.join('\t'));
+                        }
                     }
                 }
 
                 const cellCount = hasFullColumnSelection ?
-                    totalRows * selectedColumnIndices.size :
+                    rowCount * selectedColumnIndices.size :
                     (hasFullRowSelection ? selectedRowIndices.size * columnCount : 0);
 
                 const tsv = outputLines.join('\n');
-                await writeToClipboardAsync(tsv);
+                
+                const writeSuccess = await writeToClipboardAsync(tsv);
+                if (!writeSuccess) {
+                    showToast('Copy failed');
+                    return;
+                }
 
                 // Flash visible selected cells
                 selectedCells.forEach(cell => cell.classList.add('copying'));
@@ -731,7 +773,12 @@
                 }
 
                 const tsv = outputLines.join('\n');
-                await writeToClipboardAsync(tsv);
+                
+                const writeSuccess = await writeToClipboardAsync(tsv);
+                if (!writeSuccess) {
+                    showToast('Copy failed');
+                    return;
+                }
 
                 selectedCells.forEach(cell => cell.classList.add('copying'));
                 setTimeout(() => {
@@ -744,20 +791,32 @@
             console.error('Copy operation failed:', err);
             showToast('Copy failed');
         } finally {
-            isCopying = false;
+            resetCopyState();
         }
     }
 
     async function writeToClipboardAsync(text) {
+        // Add size check for very large copies
+        if (text.length > 10 * 1024 * 1024) { // 10MB warning
+            console.warn('Large clipboard operation:', (text.length / 1024 / 1024).toFixed(2), 'MB');
+        }
+
         if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
             try {
                 await navigator.clipboard.writeText(text);
-                return;
+                return true;
             } catch (e) {
                 console.warn('Clipboard API failed, trying fallback:', e.message);
             }
         }
-        await execCommandFallback(text);
+        
+        try {
+            await execCommandFallback(text);
+            return true;
+        } catch (e) {
+            console.error('All clipboard methods failed:', e);
+            return false;
+        }
     }
 
     function execCommandFallback(text) {
@@ -771,17 +830,21 @@
                 border: none; outline: none; opacity: 0;
             `;
             document.body.appendChild(textarea);
-            try {
-                textarea.focus();
-                textarea.select();
-                textarea.setSelectionRange(0, text.length);
-                const successful = document.execCommand('copy');
-                document.body.removeChild(textarea);
-                successful ? resolve() : reject(new Error('execCommand failed'));
-            } catch (err) {
-                document.body.removeChild(textarea);
-                reject(err);
-            }
+            
+            // Use setTimeout to ensure DOM is ready
+            setTimeout(() => {
+                try {
+                    textarea.focus();
+                    textarea.select();
+                    textarea.setSelectionRange(0, text.length);
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    successful ? resolve() : reject(new Error('execCommand failed'));
+                } catch (err) {
+                    try { document.body.removeChild(textarea); } catch {}
+                    reject(err);
+                }
+            }, 0);
         });
     }
 

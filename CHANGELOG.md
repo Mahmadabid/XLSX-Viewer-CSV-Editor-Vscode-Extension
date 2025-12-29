@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5.8 - Bug Fixes
+- **Bug Fixes**:
+  - Resolved copy and scrollabr related bugs in CSV editor.
+
 ## v1.5.7 - CSV Virtualization
 - **CSV Virtualization**:
   - Added virtualization (windowed rendering) for CSV files to drastically improve performance and reduce memory usage when opening large CSVs.

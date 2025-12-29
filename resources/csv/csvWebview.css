@@ -56,7 +56,12 @@
     --contrast-text: #ffffff;
     --font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --header-height: 48px;
-} 
+
+    /* Scrollbar theming (defaults) - light theme */
+    --scrollbar-thumb: var(--text-muted);
+    --scrollbar-thumb-hover: color-mix(in srgb, var(--text-muted) 60%, black 40%);
+    --scrollbar-track: transparent;
+}  
 
 body.dark-mode {
     /* Base colors */
@@ -110,7 +115,12 @@ body.dark-mode {
     /* Misc */
     --focus-ring: rgba(10, 132, 255, 0.5);
     --contrast-text: #ffffff;
-}
+
+    /* Scrollbar overrides for dark mode - increased visibility */
+    --scrollbar-thumb: rgba(255, 255, 255, 0.24);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.36);
+    --scrollbar-track: rgba(255, 255, 255, 0.04);
+} 
 
 body.vscode-theme {
     /* Base surfaces */
@@ -164,7 +174,12 @@ body.vscode-theme {
     /* Misc */
     --focus-ring: var(--vscode-focusBorder, rgba(0, 122, 255, 0.4));
     --contrast-text: var(--vscode-button-foreground, #ffffff);
-}
+
+    /* Scrollbar variables mapped to vscode theme - use button colors */
+    --scrollbar-thumb: var(--button-bg);
+    --scrollbar-thumb-hover: var(--button-hover);
+    --scrollbar-track: transparent;
+} 
 
 body {
     font-family: var(--font-family);
@@ -990,3 +1005,66 @@ body.sticky-toolbar-enabled .toolbar {
     padding: 0 8px;
     box-sizing: border-box;
 }
+
+/* --------------------------------------------------------- */
+/*                  Custom Scrollbar Styling                 */
+/*  - Scoped to the scroll containers used by the CSV view    */
+/*  - Adds Firefox-compatible rules and uses theme variables  */
+/* --------------------------------------------------------- */
+
+#tableContainer,
+.table-scroll,
+.toolbar {
+    /* Firefox */
+    scrollbar-width: thin; /* small thumb */
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); /* thumb track */
+}
+
+/* WebKit-based browsers (Chrome, Edge, Safari) */
+#tableContainer::-webkit-scrollbar,
+.table-scroll::-webkit-scrollbar,
+.toolbar::-webkit-scrollbar {
+    width: 10px;   /* vertical scrollbar clickable area */
+    height: 10px;  /* horizontal scrollbar height */
+}
+
+#tableContainer::-webkit-scrollbar-track,
+.table-scroll::-webkit-scrollbar-track,
+.toolbar::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+#tableContainer::-webkit-scrollbar-thumb,
+.table-scroll::-webkit-scrollbar-thumb,
+.toolbar::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border: 3px solid transparent; /* keeps hit area large while making thumb visually thin */
+    background-clip: content-box;
+    border-radius: 10px;
+}
+
+/* Slightly smaller radius for toolbar horizontal thumb for better fit */
+.toolbar::-webkit-scrollbar-thumb {
+    border-radius: 6px;
+}
+
+#tableContainer::-webkit-scrollbar-thumb:hover,
+.table-scroll::-webkit-scrollbar-thumb:hover,
+.toolbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+}
+
+#tableContainer::-webkit-scrollbar-button,
+.table-scroll::-webkit-scrollbar-button,
+.toolbar::-webkit-scrollbar-button,
+#tableContainer::-webkit-scrollbar-corner,
+.table-scroll::-webkit-scrollbar-corner,
+.toolbar::-webkit-scrollbar-corner {
+    display: none;
+    background: transparent;
+}
+
+/* Notes:
+   - macOS may hide scrollbars by system preference (they still exist but auto-hide).
+   - Make sure the scrolling element has the class `table-scroll` or id `tableContainer`; toolbar should be `.toolbar`.
+*/

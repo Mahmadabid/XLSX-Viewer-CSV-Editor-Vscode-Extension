@@ -54,6 +54,13 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
             }
         };
 
+        // Sync VS Code theme changes to the webview
+        const themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme(() => {
+            try { webview.postMessage({ type: 'setTheme', kind: vscode.window.activeColorTheme.kind }); } catch { }
+        });
+
+        webviewPanel.onDidDispose(() => themeChangeDisposable.dispose());
+
         const trySendInit = () => {
             if (!isWebviewReady || !worksheetsPayload) return;
             try {
@@ -91,6 +98,10 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 isWebviewReady = true;
                 trySendSettings();
                 trySendInit();
+                // Send current theme info to webview
+                try {
+                    webview.postMessage({ type: 'setTheme', kind: vscode.window.activeColorTheme.kind });
+                } catch { }
                 return;
             }
 
@@ -691,6 +702,9 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'xlsx', 'xlsxWebview.js')
         );
+        const themeScriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'theme', 'themeManager.js')
+        );
         const styleUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'xlsx', 'xlsxWebview.css')
         );
@@ -751,7 +765,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
             <button id="settingsCancelButton" class="toggle-button" title="Close">Close</button>
         </div>
 
-        <button id="toggleBackgroundButton" class="toggle-button" title="Toggle Light/Dark Mode">
+        <button id="toggleBackgroundButton" class="toggle-button" title="Toggle Theme (Light / Dark / VS Code)">
             <svg id="lightIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
                 <circle cx="12" cy="12" r="5"/>
                 <line x1="12" y1="1" x2="12" y2="3"/>
@@ -766,9 +780,9 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
             <svg id="darkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
             </svg>
+            <svg id="vscodeIcon" width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="0" fill="none" width="24" height="24"/><g><path fill="currentColor" d="M4 6c-1.105 0-2 .895-2 2v12c0 1.1.9 2 2 2h12c1.105 0 2-.895 2-2H4V6zm16-4H8c-1.105 0-2 .895-2 2v12c0 1.105.895 2 2 2h12c1.105 0 2-.895 2-2V4c0-1.105-.895-2-2-2zm-5 14H8V9h7v7zm5 0h-3V9h3v7zm0-9H8V4h12v3z"/></g></svg>        
         </button>
     </div>
-
     <div id="content">
         <div id="tableContainer"></div>
     </div>
@@ -781,6 +795,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         </div>
     </noscript>
 
+    <script src="${themeScriptUri}"></script>
     <script src="${scriptUri}"></script>
 </body>
 </html>`;

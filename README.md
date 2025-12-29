@@ -14,7 +14,8 @@ XLSX & CSV Editor is a powerful **Visual Studio Code** extension that allows use
 ✅ **Fast & Lightweight** - View Excel spreadsheets quickly within VS Code\
 ✅ **Retains Formatting** - Keeps cell styles, colors, and text formatting\
 ✅ **Multiple Sheet Support** - View all sheets in your Excel workbook\
-✅ **Toggle Background Mode** - Easily switch between dark and light backgrounds\
+✅ **Toggle Background Mode** - Easily switch between Light, Dark, and **VS Code** (mirrors editor theme) backgrounds\
+✅ **Persistent Theme** - Remembers your last used theme across files and sessions\
 ✅ **Interactive Table View** - Display spreadsheet data in a structured HTML table\
 ✅ **Color Detection & Conversion** - Converts ARGB Excel colors into CSS-compatible formats
 

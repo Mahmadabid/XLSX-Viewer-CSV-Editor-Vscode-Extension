@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.6 - VS Code Theme Support
+- **VS Code Theme Support**:
+  - Added **VS Code** theme option that mirrors the editor's native theme (Light / Dark / High Contrast).
+  - New `ThemeManager` component centralizes theme logic and persistence.
+  - **Persistent Theme**: The extension now automatically remembers your last used theme and applies it to new files.
+  - Interactive tooltip on the theme button with quick-switch action and accessibility labels.
+
 ## v1.5.5 - Dark Mode Fixes
 - **Dark Mode Fixes**:
   - Corrected text color in dark mode for XLSX views to ensure readability.

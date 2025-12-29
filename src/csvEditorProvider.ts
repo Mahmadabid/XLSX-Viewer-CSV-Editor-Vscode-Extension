@@ -218,6 +218,12 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     // Send current persisted settings to the webview so it can apply them
                     startStreaming();
                     const cfg = vscode.workspace.getConfiguration('xlsxViewer');
+
+                    // Send current theme info to webview
+                    try {
+                        webviewPanel.webview.postMessage({ type: 'setTheme', kind: vscode.window.activeColorTheme.kind });
+                    } catch { /* ignore */ }                    
+                    return;                
                     const settings = {
                         firstRowIsHeader: cfg.get('csv.firstRowIsHeader', false),
                         stickyHeader: cfg.get('csv.stickyHeader', false),
@@ -272,7 +278,13 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     try { webviewPanel.webview.postMessage({ command: 'settingsUpdated', settings }); } catch { }
                 }
             });
-            webviewPanel.onDidDispose(() => configChangeDisposable.dispose());
+
+            // Sync VS Code theme changes to the webview
+            const themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme(() => {
+                try { webviewPanel.webview.postMessage({ type: 'setTheme', kind: vscode.window.activeColorTheme.kind }); } catch { }
+            });
+
+            webviewPanel.onDidDispose(() => { configChangeDisposable.dispose(); themeChangeDisposable.dispose(); });
 
             // Fallback: don't block forever if the webview never sends webviewReady
             setTimeout(() => startStreaming(), 500);
@@ -286,6 +298,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
         const imgUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'csv', 'view.png'));
         const svgUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'csv', 'table.svg'));
         const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'csv', 'csvWebview.js'));
+        const themeScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'theme', 'themeManager.js'));
         const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'csv', 'csvWebview.css'));
         const cspSource = webview.cspSource;
 
@@ -342,7 +355,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     <button id="settingsCancelButton" class="toggle-button" title="Close">Close</button>
                 </div>
 
-                <button id="toggleBackgroundButton" class="toggle-button" title="Toggle Light/Dark Mode">
+                <button id="toggleBackgroundButton" class="toggle-button" title="Toggle Theme (Light / Dark / VS Code)">
                     <svg id="lightIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
                         <circle cx="12" cy="12" r="5"/>
                         <line x1="12" y1="1" x2="12" y2="3"/>
@@ -357,6 +370,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     <svg id="darkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
                     </svg>
+                    <svg id="vscodeIcon" width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="0" fill="none" width="24" height="24"/><g><path fill="currentColor" d="M4 6c-1.105 0-2 .895-2 2v12c0 1.1.9 2 2 2h12c1.105 0 2-.895 2-2H4V6zm16-4H8c-1.105 0-2 .895-2 2v12c0 1.105.895 2 2 2h12c1.105 0 2-.895 2-2V4c0-1.105-.895-2-2-2zm-5 14H8V9h7v7zm5 0h-3V9h3v7zm0-9H8V4h12v3z"/></g></svg>        
                 </button>
                 <div class="tooltip">
                     <img src="${imgUri}" alt="Change to table view"  style="width: auto; height: 32px; margin-left: auto; margin-top: 2px;" />
@@ -374,6 +388,7 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     JavaScript is disabled in this webview, so the CSV table cannot load.
                 </div>
             </noscript>
+            <script src="${themeScriptUri}"></script>
             <script src="${scriptUri}"></script>
         </body>
         </html>`;

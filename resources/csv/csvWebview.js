@@ -861,14 +861,14 @@
                     $('expandButtonText').textContent = 'Expand';
                     adjustColumnWidths('default');
                 }
-            },
-            toggleBackgroundButton: () => {
-                document.body.classList.toggle('alt-bg');
-                const dark = document.body.classList.contains('alt-bg');
-                if ($('lightIcon')) $('lightIcon').style.display = dark ? 'block' : 'none';
-                if ($('darkIcon')) $('darkIcon').style.display = dark ? 'none' : 'block';
             }
         };
+
+        // Theme manager component
+        // Uses shared ThemeManager (resources/themeManager.js)
+        const themeManager = new ThemeManager('toggleBackgroundButton', { 
+            onBeforeCycle: () => !isEditMode
+        }, vscode);
 
         Object.entries(btnMap).forEach(([id, handler]) => {
             const el = $(id);
@@ -1002,7 +1002,11 @@
 
     // --- Settings UI and behavior ---
     // Keep the currently-applied settings so they can be re-applied after rows are inserted
-    let currentSettings = {};
+    let currentSettings = {
+        firstRowIsHeader: false,
+        stickyToolbar: true,
+        stickyHeader: false
+    };
 
     function applySettings(settings, saveLocal = false) {
         // cache latest settings
@@ -1012,6 +1016,14 @@
         document.body.classList.toggle('first-row-as-header', !!settings.firstRowIsHeader);
         document.body.classList.toggle('sticky-header-enabled', !!settings.stickyHeader);
         document.body.classList.toggle('sticky-toolbar-enabled', !!settings.stickyToolbar);
+
+        // Update settings panel UI
+        const chkHeader = $('chkHeaderRow');
+        const chkSticky = $('chkStickyHeader');
+        const chkToolbar = $('chkStickyToolbar');
+        if (chkHeader) chkHeader.checked = !!settings.firstRowIsHeader;
+        if (chkSticky) chkSticky.checked = !!settings.stickyHeader;
+        if (chkToolbar) chkToolbar.checked = !!settings.stickyToolbar;
 
         // Update header / sticky behavior
         // Bold first row when firstRowIsHeader is enabled

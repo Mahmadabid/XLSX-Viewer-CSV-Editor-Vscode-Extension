@@ -1146,6 +1146,16 @@
             hyperlinkPreview: settings && typeof settings.hyperlinkPreview === 'boolean' ? settings.hyperlinkPreview : currentSettings.hyperlinkPreview
         };
 
+        // Update settings panel UI
+        const chkHeader = document.getElementById('chkHeaderRow');
+        const chkSticky = document.getElementById('chkStickyHeader');
+        const chkToolbar = document.getElementById('chkStickyToolbar');
+        const chkHyperlink = document.getElementById('chkHyperlinkPreview');
+        if (chkHeader) chkHeader.checked = !!currentSettings.firstRowIsHeader;
+        if (chkSticky) chkSticky.checked = !!currentSettings.stickyHeader;
+        if (chkToolbar) chkToolbar.checked = !!currentSettings.stickyToolbar;
+        if (chkHyperlink) chkHyperlink.checked = !!currentSettings.hyperlinkPreview;
+
         // Sticky toolbar behavior (CSV parity): when disabled, move toolbar into the scrollable content.
         const toolbar = document.querySelector('.toolbar');
         const headerBg = document.querySelector('.header-background');
@@ -1460,26 +1470,10 @@
             });
         }
 
-        // Dark mode toggle
-        const toggleBackgroundButton = document.getElementById('toggleBackgroundButton');
-        if (toggleBackgroundButton) {
-            toggleBackgroundButton.addEventListener('click', () => {
-                if (isEditMode) return;
-                document.body.classList.toggle('alt-bg');
-                const isDarkMode = document.body.classList.contains('alt-bg');
-
-                const lightIcon = document.getElementById('lightIcon');
-                const darkIcon = document.getElementById('darkIcon');
-
-                if (isDarkMode) {
-                    if (lightIcon) lightIcon.style.display = 'block';
-                    if (darkIcon) darkIcon.style.display = 'none';
-                } else {
-                    if (lightIcon) lightIcon.style.display = 'none';
-                    if (darkIcon) darkIcon.style.display = 'block';
-                }
-            });
-        }
+        // Theme manager component
+        const themeManager = new ThemeManager('toggleBackgroundButton', { 
+            onBeforeCycle: () => !isEditMode 
+        }, vscode);
 
         // Expand toggle
         const toggleExpandButton = document.getElementById('toggleExpandButton');

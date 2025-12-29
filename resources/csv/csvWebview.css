@@ -3,51 +3,175 @@
 }
 
 :root {
+    /* Base colors */
     --bg-color: #ffffff;
     --text-color: #1d1d1f;
+    --text-muted: #86868b;
     --border-color: #d2d2d7;
+    
+    /* Surface colors */
     --header-bg: #f5f5f7;
     --row-hover-bg: #f5f5f7;
+    --panel-bg: rgba(245, 245, 247, 0.9);
+    --overlay-bg: rgba(255, 255, 255, 0.95);
+    
+    /* Accent colors */
     --accent-color: #007aff;
     --accent-bg: rgba(0, 122, 255, 0.1);
+    --accent-hover: #0062cc;
+    --accent-shadow: rgba(0, 122, 255, 0.2);
+    
+    /* Selection */
     --selection-border: #007aff;
     --selection-bg: rgba(0, 122, 255, 0.18);
-    --font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    
+    /* Semantic colors */
+    --success-color: #34c759;
+    --success-bg: rgba(52, 199, 89, 0.15);
+    --warning-color: #ff9500;
+    --warning-bg: rgba(255, 149, 0, 0.15);
+    --error-color: #ff3b30;
+    --error-bg: rgba(255, 59, 48, 0.15);
+    --info-color: #5856d6;
+    --info-bg: rgba(88, 86, 214, 0.15);
+    
+    /* Interactive */
     --button-bg: #007aff;
     --button-text: #ffffff;
     --button-hover: #0062cc;
-    --tooltip-bg: rgb(231, 248, 255);
-    --tooltip-text: #000000;
+    --header-hover-bg: #e8e8ed;
+    
+    /* Tooltip */
+    --tooltip-bg: #f5f5f7;
+    --tooltip-text: #1d1d1f;
     --tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
+    
+    /* Misc */
+    --focus-ring: rgba(0, 122, 255, 0.4);
+    --contrast-text: #ffffff;
+    --font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-body.alt-bg {
+body.dark-mode {
+    /* Base colors */
     --bg-color: #1c1c1e;
     --text-color: #f5f5f7;
+    --text-muted: #98989d;
     --border-color: #38383a;
+    
+    /* Surface colors */
     --header-bg: #2c2c2e;
     --row-hover-bg: #2c2c2e;
+    --panel-bg: rgba(44, 44, 46, 0.9);
+    --overlay-bg: rgba(44, 44, 46, 0.95);
+    
+    /* Accent colors */
     --accent-color: #0a84ff;
     --accent-bg: rgba(10, 132, 255, 0.15);
+    --accent-hover: #409cff;
+    --accent-shadow: rgba(10, 132, 255, 0.3);
+    
+    /* Selection */
     --selection-border: #0a84ff;
     --selection-bg: rgba(10, 132, 255, 0.25);
+    
+    /* Semantic colors */
+    --success-color: #30d158;
+    --success-bg: rgba(48, 209, 88, 0.2);
+    --warning-color: #ff9f0a;
+    --warning-bg: rgba(255, 159, 10, 0.2);
+    --error-color: #ff453a;
+    --error-bg: rgba(255, 69, 58, 0.2);
+    --info-color: #5e5ce6;
+    --info-bg: rgba(94, 92, 230, 0.2);
+    
+    /* Interactive */
     --button-bg: #0a84ff;
-    --button-hover: #0070eb;
-    --tooltip-bg: rgb(231, 248, 255);
-    /* Original tooltip for dark mode too per request */
-    --tooltip-text: #000000;
-    --tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --button-text: #ffffff;
+    --button-hover: #409cff;
+    --header-hover-bg: #3a3a3c;
+    
+    /* Tooltip */
+    --tooltip-bg: #2c2c2e;
+    --tooltip-text: #f5f5f7;
+    --tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.4);
+    
+    /* Misc */
+    --focus-ring: rgba(10, 132, 255, 0.5);
+    --contrast-text: #ffffff;
+}
+
+body.vscode-theme {
+    /* Base surfaces */
+    --bg-color: var(--vscode-editor-background, #ffffff);
+    --text-color: var(--vscode-editor-foreground, #1d1d1f);
+    --text-muted: var(--vscode-descriptionForeground, #86868b);
+    --border-color: var(--vscode-panel-border, #d2d2d7);
+
+    /* Surface colors */
+    --header-bg: var(--vscode-editorWidget-background, #f5f5f7);
+    --row-hover-bg: var(--vscode-list-hoverBackground, rgba(0, 132, 255, 0.076));
+    --panel-bg: var(--vscode-editorWidget-background, rgba(245, 245, 247, 0.9));
+    --overlay-bg: var(--vscode-notifications-background, rgba(255, 255, 255, 0.95));
+
+    /* Accent */
+    --accent-color: var(--vscode-focusBorder, #007aff);
+    --accent-bg: color-mix(in srgb, var(--vscode-focusBorder, #007aff) 15%, transparent);
+    --accent-hover: var(--vscode-button-hoverBackground, #0062cc);
+    --accent-shadow: color-mix(in srgb, var(--vscode-focusBorder, #007aff) 25%, transparent);
+
+    /* Selection */
+    --selection-border: var(--vscode-focusBorder, #007aff);
+    --selection-bg: color-mix(in srgb, var(--vscode-focusBorder, #007aff) 20%, transparent);
+
+    /* Semantic colors */
+    --success-color: var(--vscode-testing-iconPassed, #34c759);
+    --success-bg: color-mix(in srgb, var(--vscode-testing-iconPassed, #34c759) 15%, transparent);
+    --warning-color: var(--vscode-editorWarning-foreground, #ff9500);
+    --warning-bg: color-mix(in srgb, var(--vscode-editorWarning-foreground, #ff9500) 15%, transparent);
+    --error-color: var(--vscode-errorForeground, #ff3b30);
+    --error-bg: color-mix(in srgb, var(--vscode-errorForeground, #ff3b30) 15%, transparent);
+    --info-color: var(--vscode-editorInfo-foreground, #5856d6);
+    --info-bg: color-mix(in srgb, var(--vscode-editorInfo-foreground, #5856d6) 15%, transparent);
+
+    /* Buttons */
+    --button-bg: var(--vscode-button-background, #007aff);
+    --button-hover: var(--vscode-button-hoverBackground, #0062cc);
+    --button-text: var(--vscode-button-foreground, #ffffff);
+    --header-hover-bg: var(--vscode-list-hoverBackground, #e8e8ed);
+
+    /* Tooltip */
+    --tooltip-bg: var(--vscode-editorHoverWidget-background, #f5f5f7);
+    --tooltip-text: var(--vscode-editorHoverWidget-foreground, #1d1d1f);
+    --tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
+
+    /* Misc */
+    --focus-ring: var(--vscode-focusBorder, rgba(0, 122, 255, 0.4));
+    --contrast-text: var(--vscode-button-foreground, #ffffff);
 }
 
 body {
     font-family: var(--font-family);
     padding: 48px 0 0 3px;
-    /* Increased padding to 60px to clear fixed header */
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
     overflow: hidden;
-    /* Scroll the wrapper, not the body */
     font-size: 13px;
     line-height: 1.4;
     -webkit-font-smoothing: antialiased;
@@ -55,18 +179,13 @@ body {
 }
 
 body.edit-mode #content {
-    outline: 3px solid #007aff;
+    outline: 3px solid var(--accent-color);
     outline-offset: -2px;
     border-radius: 8px;
     margin: 4px;
     overflow: visible;
     position: relative;
     z-index: 1;
-    /* Stay below the fixed header */
-}
-
-body.alt-bg.edit-mode #content {
-    outline: 2px solid #0a84ff;
 }
 
 #content {
@@ -78,7 +197,6 @@ table {
     border-collapse: collapse;
     width: auto;
     min-width: 0;
-    /* Remove 100% to allow column width enforcement */
     table-layout: fixed;
     user-select: none;
     -webkit-user-select: none;
@@ -86,8 +204,6 @@ table {
     border: 1px solid var(--border-color);
     border-radius: 6px;
     overflow: visible;
-    /* Allow sticky elements to escape the table */
-    /* For rounded corners on the table */
 }
 
 th,
@@ -97,21 +213,17 @@ td {
     text-align: left;
     white-space: nowrap;
     overflow: hidden;
-    /* Ensure truncation works */
     text-overflow: ellipsis;
-    /* Add ellipsis */
     position: relative;
     cursor: cell;
     min-width: 40px;
     max-width: 180px;
-    /* Capped at 180px by default */
     transition: background-color 0.1s ease, border-color 0.1s ease;
 }
 
 body.expanded-mode th,
 body.expanded-mode td {
     max-width: none;
-    /* Remove cap in expanded mode */
 }
 
 th {
@@ -119,10 +231,8 @@ th {
     font-weight: 600;
     color: var(--text-color);
     border-bottom: 2px solid var(--border-color);
-    /* Slightly thicker bottom border for headers */
 }
 
-/* Column headers stick to the top only */
 th.col-header {
     position: sticky;
     top: 0;
@@ -137,12 +247,10 @@ th.col-header {
     -webkit-overflow-scrolling: touch;
 }
 
-/* When the toolbar is not sticky, let the table use more vertical space to avoid a gap */
 body:not(.sticky-toolbar-enabled) .table-scroll {
     max-height: calc(100vh - 6px);
 }
 
-/* Row headers (first column) */
 tbody th:first-child,
 tbody td:first-child,
 thead th:first-child {
@@ -159,15 +267,12 @@ thead th:first-child {
     border-right: 2px solid var(--border-color);
 }
 
-/* Ensure .row-header class is explicitly sticky (covers generated tables) */
 th.row-header {
     position: sticky;
     left: 0;
     z-index: 20;
 }
 
-/* Fix for top-left corner index */
-/* Make the corner cell stick to top-left and sit above other headers */
 thead th:first-child {
     position: sticky;
     top: 0;
@@ -176,22 +281,16 @@ thead th:first-child {
     background-color: var(--header-bg);
 }
 
-/* toolbar moved to consolidated block near end of file */
-
-/* When toolbar is set to non-sticky by setting, make it flow with content */
 .toolbar.not-sticky {
     position: relative;
 }
 
-/* When settings panel is open, keep toolbar on one line and allow horizontal scrolling */
 .toolbar.settings-open {
     flex-wrap: nowrap;
     align-items: center;
     overflow-x: auto;
     white-space: nowrap;
 }
-
-/* settings-panel styling moved to consolidated block near end of file */
 
 .settings-panel.hidden {
     display: none !important;
@@ -202,14 +301,8 @@ thead th:first-child {
     left: 12px;
     right: 12px;
     z-index: 10001;
-}
-
-/* Make sure when floating we can wrap into column layout on narrow screens */
-.settings-panel.floating {
     flex-wrap: wrap;
 }
-
-/* setting-item styles consolidated at end of file */
 
 .toggle-button.small {
     height: 30px;
@@ -220,19 +313,17 @@ thead th:first-child {
     flex-shrink: 0;
 }
 
-/* Make the settings Cancel button match the main toolbar (bluish) and cap its width */
 #settingsCancelButton {
     max-width: 70px !important;
     background-color: var(--button-bg);
     color: var(--button-text);
-    box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
+    box-shadow: var(--shadow-sm);
 }
 
-/* Ensure the Cancel button uses the same hover/active interactions as other toolbar buttons */
 #settingsCancelButton:hover {
     background-color: var(--button-hover);
     transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0, 122, 255, 0.25);
+    box-shadow: var(--shadow-md);
 }
 
 #settingsCancelButton:active {
@@ -240,58 +331,44 @@ thead th:first-child {
     box-shadow: none;
 }
 
-/* Removing the media query that forced a column layout, 
-   allowing flex-wrap to handle it naturally item-by-item */
 @media (max-width: 640px) {
     .settings-panel {
         flex-direction: row;
-        /* Keep as row so wrap works item-by-item */
     }
 }
 
-/* First row header styling when enabled */
 body.first-row-as-header tbody tr.header-row td {
     font-weight: 700;
     background-color: var(--header-bg);
 }
 
-/* Sticky header row (first data row) when enabled */
 body.sticky-header-enabled tbody tr.header-row td,
 body.sticky-header-enabled tbody tr.header-row th {
     position: sticky;
     top: 34px;
-    /* sits below column headers */
     z-index: 10;
 }
 
-/* Ensure the left row header cell of the sticky header row stays below the column headers and stays on the left */
 body.sticky-header-enabled tbody tr.header-row th.row-header {
     position: sticky;
     top: 34px;
-    /* below column headers */
     left: 0;
-    /* stay pinned to left */
     z-index: 30;
-    /* higher so it's above other cells */
     background-color: var(--header-bg);
 }
 
-/* If toolbar is not sticky, hide the header blur element (to avoid empty fixed bar) */
 body:not(.sticky-toolbar-enabled) .header-background {
     display: none;
 }
 
-/* If toolbar is not sticky, remove the top spacing reserved for the fixed header so content sits flush */
 body:not(.sticky-toolbar-enabled) {
     padding-top: 0px;
 }
 
-/* If toolbar is not sticky, ensure toolbar flows */
 body:not(.sticky-toolbar-enabled) .toolbar {
     position: relative;
 }
 
-/* Expanded toolbar states */
 .toolbar.expanded-toolbar {
     padding: 12px 18px;
     gap: 16px;
@@ -304,7 +381,6 @@ body:not(.sticky-toolbar-enabled) .toolbar {
     width: 100%;
 }
 
-/* If the toolbar is not sticky, ensure the expanded toolbar still flows */
 body:not(.sticky-toolbar-enabled) .toolbar.expanded-toolbar {
     position: relative;
 }
@@ -322,14 +398,12 @@ body:not(.sticky-toolbar-enabled) .toolbar.expanded-toolbar {
     z-index: 9999;
     border-bottom: 1px solid var(--border-color);
     pointer-events: none;
-    /* Let clicks pass through to buttons */
 }
 
 .toolbar img {
     flex-shrink: 0;
     max-width: none !important;
     width: 120px;
-    /* Logo width */
     height: auto;
     display: inline-block;
 }
@@ -337,7 +411,6 @@ body:not(.sticky-toolbar-enabled) .toolbar.expanded-toolbar {
 .toolbar svg {
     flex-shrink: 0;
     width: 16px;
-    /* Icon width */
     height: 16px;
     stroke-width: 2;
 }
@@ -356,23 +429,19 @@ body:not(.sticky-toolbar-enabled) .toolbar.expanded-toolbar {
     background-color: var(--button-bg);
     color: var(--button-text);
     transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-    box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
+    box-shadow: var(--shadow-sm);
 }
 
 .toggle-button:hover {
     background-color: var(--button-hover);
     transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0, 122, 255, 0.25);
+    box-shadow: var(--shadow-md);
 }
 
 .toggle-button:active {
     transform: translateY(0);
     box-shadow: none;
 }
-
-/* icon-only button styles consolidated at end of file */
-
 
 td {
     background-color: var(--bg-color);
@@ -393,7 +462,6 @@ td span.cell-content {
     position: relative;
     display: inline-block;
     z-index: 100000;
-    /* Ensure the tooltip wrapper is also high */
 }
 
 .tooltip .tooltiptext {
@@ -406,9 +474,7 @@ td span.cell-content {
     border-radius: 8px;
     padding: 10px;
     position: absolute;
-    /* Position relative to the .tooltip container so it appears near the element */
     z-index: 100000 !important;
-    /* Keep a high z-index */
     top: calc(100% + 8px);
     left: 50%;
     transform: translateX(-50%) translateY(-10px);
@@ -430,22 +496,19 @@ td span.cell-content {
 }
 
 .tooltip .tooltiptext span {
-    color: #ff6600;
-    /* Original color */
+    color: var(--warning-color);
     font-weight: 600;
 }
 
 .tooltip .tooltiptext .warning {
-    color: red;
-    /* Original color */
+    color: var(--error-color);
     font-weight: 700;
     display: block;
     margin-bottom: 4px;
 }
 
 .tooltip .tooltiptext .instruction {
-    color: rgb(2, 105, 190);
-    /* Original color */
+    color: var(--info-color);
     font-weight: normal;
 }
 
@@ -456,21 +519,10 @@ td.selected {
     z-index: 5;
 }
 
-body.alt-bg td.selected {
-    border: 2px solid var(--selection-border) !important;
-    background-color: var(--selection-bg) !important;
-}
-
 td.active-cell {
     border: 2px solid var(--accent-color) !important;
     background-color: transparent !important;
     z-index: 6;
-    /* Box shadow removed to prefer simple border */
-}
-
-body.alt-bg td.active-cell {
-    background-color: transparent !important;
-    border: 2px solid var(--accent-color) !important;
 }
 
 td.active-cell::after {
@@ -494,14 +546,8 @@ td.column-selected {
 
 th.column-selected {
     background-color: var(--accent-color) !important;
-    /* Solid Blue */
-    color: white !important;
+    color: var(--contrast-text) !important;
     border-bottom: 2px solid var(--accent-color) !important;
-}
-
-body.alt-bg th.column-selected {
-    background-color: var(--accent-color) !important;
-    color: white !important;
 }
 
 td.row-selected {
@@ -512,19 +558,8 @@ td.row-selected {
 
 th.row-selected {
     background-color: var(--accent-color) !important;
-    /* Solid Blue */
-    color: white !important;
+    color: var(--contrast-text) !important;
     border-right: 2px solid var(--accent-color) !important;
-}
-
-body.alt-bg th.row-selected {
-    background-color: var(--accent-color) !important;
-    color: white !important;
-}
-
-body.alt-bg th.row-selected {
-    background-color: rgba(10, 132, 255, 0.2) !important;
-    color: #fff !important;
 }
 
 th.col-header,
@@ -536,12 +571,7 @@ th.row-header {
 
 th.col-header:hover,
 th.row-header:hover {
-    background-color: rgb(210, 210, 210);
-}
-
-body.alt-bg th.col-header:hover,
-body.alt-bg th.row-header:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--header-hover-bg);
 }
 
 /* Copy Animation */
@@ -565,14 +595,10 @@ td.copying {
 }
 
 ::selection {
-    background-color: rgba(0, 122, 255, 0.2);
+    background-color: var(--selection-bg);
 }
 
 td:hover {
-    background-color: var(--row-hover-bg) !important;
-}
-
-body.alt-bg td:hover {
     background-color: var(--row-hover-bg) !important;
 }
 
@@ -581,25 +607,18 @@ body.alt-bg td:hover {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--overlay-bg);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    color: #1d1d1f;
+    color: var(--text-color);
     padding: 6px 12px;
     border-radius: 6px;
     font-size: 12px;
     font-weight: 500;
     display: none;
     z-index: 1001;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-body.alt-bg .selection-info {
-    background: rgba(30, 30, 30, 0.9);
-    color: #f5f5f7;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
 }
 
 .hidden {
@@ -610,16 +629,13 @@ body.edit-mode td {
     user-select: text;
     cursor: text;
     text-overflow: clip;
-    /* Remove ellipsis in edit mode */
     max-width: none !important;
-    /* Allow cell to expand to show full text */
     overflow: visible;
 }
 
 body.edit-mode td[contenteditable="true"]:focus {
     outline: none;
-    border: 2px solid #ff9500 !important;
-    /* Warm orange border for edit mode selection */
+    border: 2px solid var(--warning-color) !important;
     background-color: var(--bg-color) !important;
     z-index: 10;
 }
@@ -630,8 +646,8 @@ body.edit-mode td[contenteditable="true"]:focus {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.9);
-    background-color: rgba(255, 255, 255, 0.95);
-    color: #1d1d1f;
+    background-color: var(--overlay-bg);
+    color: var(--text-color);
     padding: 12px 24px;
     border-radius: 100px;
     z-index: 2000;
@@ -644,15 +660,8 @@ body.edit-mode td[contenteditable="true"]:focus {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(10px);
     pointer-events: none;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-body.alt-bg .toast-notification {
-    background-color: rgba(44, 44, 46, 0.95);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
 }
 
 .toast-notification.show {
@@ -664,7 +673,7 @@ body.alt-bg .toast-notification {
 .toast-icon-wrapper {
     width: 24px;
     height: 24px;
-    background-color: #34c759;
+    background-color: var(--success-color);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -675,7 +684,7 @@ body.alt-bg .toast-notification {
 .toast-icon-wrapper svg {
     width: 16px;
     height: 16px;
-    stroke: white;
+    stroke: var(--contrast-text);
 }
 
 .toast-text {
@@ -684,15 +693,13 @@ body.alt-bg .toast-notification {
     white-space: nowrap;
 }
 
-/* Specific fix for Toolbar scrollbar position */
+/* Toolbar */
 .toolbar {
     height: 48px;
-    /* Fixed height to match header-background */
     margin-top: 0;
     margin-bottom: 0;
     display: flex;
     gap: 12px;
-    /* Default to flowing layout; stickiness controlled by body class */
     position: relative;
     top: auto;
     left: auto;
@@ -702,12 +709,10 @@ body.alt-bg .toast-notification {
     overflow-y: hidden;
     white-space: nowrap;
     padding: 0 12px;
-    /* Padding adjusted */
     align-items: center;
     z-index: 10000;
 }
 
-/* Pin toolbar only when setting enabled */
 body.sticky-toolbar-enabled .toolbar {
     position: fixed;
     top: 0;
@@ -728,33 +733,24 @@ body.sticky-toolbar-enabled .toolbar {
     margin: 0;
 }
 
-/* --- Settings Panel Refinement --- */
+/* --- Settings Panel --- */
 .settings-panel {
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
     align-items: center;
     justify-content: space-between;
-    /* Pushes button away from items */
-
-    background: rgba(255, 255, 255, 0.8);
+    background: var(--panel-bg);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-
     color: var(--text-color);
     padding: 12px 20px;
     border-radius: 12px;
-    /* Smoother corners */
     border: 1px solid var(--border-color);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-lg);
 }
 
-body.alt-bg .settings-panel {
-    background: rgba(44, 44, 46, 0.8);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-/* Container for checkboxes to keep them together */
+/* Container for checkboxes */
 .settings-group {
     display: flex;
     gap: 16px;
@@ -770,7 +766,7 @@ body.alt-bg .settings-panel {
     cursor: pointer;
 }
 
-/* Checkbox (Slightly larger and cleaner) */
+/* Checkbox */
 .setting-item input[type="checkbox"] {
     appearance: none;
     -webkit-appearance: none;
@@ -792,46 +788,37 @@ body.alt-bg .settings-panel {
 .setting-item input[type="checkbox"]:checked::after {
     content: "✓";
     position: absolute;
-    color: white;
+    color: var(--contrast-text);
     font-size: 11px;
     left: 3px;
     top: -1px;
 }
 
-/* Disabled state for checkboxes: visually muted and non-interactive */
+/* Disabled checkbox */
 .setting-item input[type="checkbox"]:disabled {
-    /* Keep same sizing/shape but make it look disabled */
     cursor: not-allowed;
-    opacity: 0.6;
-    background-color: transparent;
+    opacity: 0.5;
+    background-color: var(--header-bg);
     border-color: var(--border-color);
     box-shadow: none;
 }
 
-/* Ensure no checkmark appears if somehow checked while disabled */
 .setting-item input[type="checkbox"]:disabled::after {
     content: none !important;
 }
 
-/* Dim the label text and prevent pointer cursor when disabled */
 .setting-item input[type="checkbox"]:disabled + span {
-    opacity: 0.65;
+    opacity: 0.5;
     cursor: not-allowed;
-    color: var(--text-color);
+    color: var(--text-muted);
 }
 
-/* Dark mode tweaks for disabled label */
-body.alt-bg .setting-item input[type="checkbox"]:disabled + span {
-    color: var(--text-color);
-    opacity: 0.65;
-}
-
-/* Handle the Cancel Button Wrapping */
+/* Cancel Button */
 #settingsCancelButton {
     max-width: 70px;
     background-color: var(--button-bg);
     color: var(--button-text);
-    box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
+    box-shadow: var(--shadow-sm);
     border: none;
     font-weight: 500;
     padding: 0 10px;
@@ -841,13 +828,13 @@ body.alt-bg .setting-item input[type="checkbox"]:disabled + span {
     align-items: center;
     gap: 6px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.25,0.1,0.25,1);
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 #settingsCancelButton:hover {
     background-color: var(--button-hover);
     transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0, 122, 255, 0.25);
+    box-shadow: var(--shadow-md);
 }
 
 #settingsCancelButton:active {
@@ -855,7 +842,6 @@ body.alt-bg .setting-item input[type="checkbox"]:disabled + span {
     box-shadow: none;
 }
 
-/* Logic for "Cancel button on next line when screen shrinks" */
 @media (max-width: 500px) {
     .settings-panel {
         flex-direction: column;
@@ -870,7 +856,62 @@ body.alt-bg .setting-item input[type="checkbox"]:disabled + span {
     #settingsCancelButton {
         width: 100%;
         max-width: none;
-        /* Spans full width on mobile */
         justify-content: center;
     }
+}
+
+/* Interactive theme tooltip */
+.theme-tooltip {
+    position: fixed;
+    background: var(--tooltip-bg);
+    color: var(--tooltip-text);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--tooltip-shadow);
+    padding: 8px 10px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.12s ease, transform 0.12s ease;
+    pointer-events: none;
+    z-index: 20000;
+    cursor: pointer;
+}
+
+.theme-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.theme-tooltip:focus {
+    outline: 2px solid var(--focus-ring);
+}
+
+.theme-tooltip .theme-tooltip-text {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.theme-tooltip .theme-tooltip-text strong {
+    font-weight: 700;
+}
+
+/* VS Code icon */
+#vscodeIcon {
+    width: 18px !important;
+    height: 18px !important;
+    display: inline-block;
+    vertical-align: middle;
+    object-fit: contain;
+    margin: 0;
+}
+
+.toolbar img:not(#vscodeIcon) {
+    max-width: none;
 }

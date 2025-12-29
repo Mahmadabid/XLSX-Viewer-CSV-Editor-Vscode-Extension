@@ -55,7 +55,8 @@
     --focus-ring: rgba(0, 122, 255, 0.4);
     --contrast-text: #ffffff;
     --font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
+    --header-height: 48px;
+} 
 
 body.dark-mode {
     /* Base colors */
@@ -167,7 +168,7 @@ body.vscode-theme {
 
 body {
     font-family: var(--font-family);
-    padding: 48px 0 0 3px;
+    padding: var(--header-height) 0 0 3px;
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
@@ -176,7 +177,7 @@ body {
     line-height: 1.4;
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.3s ease, color 0.3s ease;
-}
+} 
 
 body.edit-mode #content {
     outline: 3px solid var(--accent-color);
@@ -191,6 +192,7 @@ body.edit-mode #content {
 #content {
     position: relative;
     z-index: 1;
+    height: calc(100vh - var(--header-height));
 }
 
 table {
@@ -241,15 +243,17 @@ th.col-header {
 }
 
 .table-scroll {
-    max-height: calc(100vh - 54px);
+    height: calc(100vh - var(--header-height));
+    max-height: none;
     overflow: auto;
     position: relative;
     -webkit-overflow-scrolling: touch;
-}
+} 
 
 body:not(.sticky-toolbar-enabled) .table-scroll {
-    max-height: calc(100vh - 6px);
-}
+    height: calc(100vh - var(--header-height));
+    max-height: none;
+} 
 
 tbody th:first-child,
 tbody td:first-child,
@@ -363,11 +367,8 @@ body:not(.sticky-toolbar-enabled) .header-background {
 
 body:not(.sticky-toolbar-enabled) {
     padding-top: 0px;
-}
-
-body:not(.sticky-toolbar-enabled) .toolbar {
-    position: relative;
-}
+    --header-height: 6px;
+} 
 
 .toolbar.expanded-toolbar {
     padding: 12px 18px;
@@ -379,10 +380,34 @@ body:not(.sticky-toolbar-enabled) .toolbar {
 
 .toolbar.expanded-toolbar .settings-panel {
     width: 100%;
+    position: sticky;
+}
+
+/* Reduce vertical padding when toolbar is sticky so header-height stays compact */
+body.sticky-toolbar-enabled .toolbar {
+    padding: 4px 12px;
+}
+
+/* Slightly tighter expanded toolbar when sticky */
+body.sticky-toolbar-enabled .toolbar.expanded-toolbar {
+    padding: 4px 18px;
+    gap: 12px;
+}
+
+/* Safety cap for header height when toolbar is sticky */
+:root {
+    --header-height-max: 96px;
 }
 
 body:not(.sticky-toolbar-enabled) .toolbar.expanded-toolbar {
     position: relative;
+}
+
+body:not(.sticky-toolbar-enabled) .toolbar {
+    position: sticky;
+    left: 0;
+    z-index: 10000;
+    width: 100%;
 }
 
 .header-background {
@@ -390,7 +415,7 @@ body:not(.sticky-toolbar-enabled) .toolbar.expanded-toolbar {
     top: 0;
     left: 0;
     width: 100%;
-    height: 48px;
+    height: var(--header-height);
     background-color: var(--bg-color);
     opacity: 0.8;
     backdrop-filter: blur(10px);
@@ -398,7 +423,7 @@ body:not(.sticky-toolbar-enabled) .toolbar.expanded-toolbar {
     z-index: 9999;
     border-bottom: 1px solid var(--border-color);
     pointer-events: none;
-}
+} 
 
 .toolbar img {
     flex-shrink: 0;
@@ -695,7 +720,8 @@ body.edit-mode td[contenteditable="true"]:focus {
 
 /* Toolbar */
 .toolbar {
-    height: 48px;
+    min-height: var(--header-height);
+    height: auto;
     margin-top: 0;
     margin-bottom: 0;
     display: flex;
@@ -708,10 +734,10 @@ body.edit-mode td[contenteditable="true"]:focus {
     overflow-x: auto;
     overflow-y: hidden;
     white-space: nowrap;
-    padding: 0 12px;
+    padding: 4px 12px;
     align-items: center;
     z-index: 10000;
-}
+} 
 
 body.sticky-toolbar-enabled .toolbar {
     position: fixed;
@@ -914,4 +940,53 @@ body.sticky-toolbar-enabled .toolbar {
 
 .toolbar img:not(#vscodeIcon) {
     max-width: none;
+}
+
+/* Virtual scrolling styles */
+.table-scroll {
+    height: calc(100vh - var(--header-height)); /* Adjust based on toolbar height */
+    overflow-y: auto;
+    overflow-x: auto;
+    position: relative;
+}
+
+.virtual-spacer td {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    font-size: 14px;
+    color: var(--vscode-foreground);
+}
+
+/* Ensure table takes full width for proper scrolling */
+#csv-table {
+    min-width: 100%;
+}
+
+/* Sticky header within scroll container */
+.sticky-header-enabled #csv-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 34;
+    background: var(--vscode-editor-background);
+}
+
+/* Row height consistency for virtual scrolling */
+#csv-table tbody tr:not(.virtual-spacer) {
+    height: 28px;
+}
+
+#csv-table tbody tr:not(.virtual-spacer) td,
+#csv-table tbody tr:not(.virtual-spacer) th {
+    height: 28px;
+    line-height: 28px;
+    padding: 0 8px;
+    box-sizing: border-box;
 }

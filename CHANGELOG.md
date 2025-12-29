@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.5.7 - CSV Virtualization
+- **CSV Virtualization**:
+  - Added virtualization (windowed rendering) for CSV files to drastically improve performance and reduce memory usage when opening large CSVs.
+  - Implemented virtual scrolling and adaptive row rendering so only visible rows are rendered at any time.
+
 ## v1.5.6 - VS Code Theme Support
 - **VS Code Theme Support**:
   - Added **VS Code** theme option that mirrors the editor's native theme (Light / Dark / High Contrast).

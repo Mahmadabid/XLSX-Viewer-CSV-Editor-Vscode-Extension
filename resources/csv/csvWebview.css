@@ -212,16 +212,18 @@ body.edit-mode #content {
 
 table {
     border-collapse: collapse;
-    width: auto;
+    /* Use intrinsic width so table doesn't expand to fill the viewport */
+    width: max-content;
     min-width: 0;
-    table-layout: fixed;
+    /* Use automatic table layout so column widths are driven by content */
+    table-layout: auto;
     user-select: none;
     -webkit-user-select: none;
     border-spacing: 0;
     border: 1px solid var(--border-color);
     border-radius: 6px;
     overflow: visible;
-}
+} 
 
 th,
 td {
@@ -273,7 +275,8 @@ body:not(.sticky-toolbar-enabled) .table-scroll {
 tbody th:first-child,
 tbody td:first-child,
 thead th:first-child {
-    width: 30px !important;
+    /* Allow the row header to grow with content but keep a sensible minimum */
+    width: auto !important;
     min-width: 30px !important;
     background-color: var(--header-bg);
     text-align: center;
@@ -284,7 +287,10 @@ thead th:first-child {
     left: 0;
     z-index: 20;
     border-right: 2px solid var(--border-color);
-}
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+} 
 
 th.row-header {
     position: sticky;
@@ -980,9 +986,11 @@ body.sticky-toolbar-enabled .toolbar {
     color: var(--vscode-foreground);
 }
 
-/* Ensure table takes full width for proper scrolling */
+/* Allow table to use intrinsic width to avoid stretching when content is narrow */
 #csv-table {
-    min-width: 100%;
+    min-width: 0;
+    /* Prefer intrinsic width but fall back to content clipping */
+    width: max-content;
 }
 
 /* Sticky header within scroll container */

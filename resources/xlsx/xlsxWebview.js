@@ -1471,8 +1471,8 @@
         }
 
         // Theme manager component
-        const themeManager = new ThemeManager('toggleBackgroundButton', { 
-            onBeforeCycle: () => !isEditMode 
+        const themeManager = new ThemeManager('toggleBackgroundButton', {
+            onBeforeCycle: () => !isEditMode
         }, vscode);
 
         // Expand toggle

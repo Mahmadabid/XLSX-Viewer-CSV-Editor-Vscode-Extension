@@ -1,8 +1,12 @@
 # Changelog
 
+## v1.5.9 - Minor Fixes
+- **Minor Fixes**:
+  - Fixed table stretching issue when opening CSV files in certain window sizes.
+
 ## v1.5.8 - Bug Fixes
 - **Bug Fixes**:
-  - Resolved copy and scrollabr related bugs in CSV editor.
+  - Resolved copy and scrollbar related bugs in CSV editor.
 
 ## v1.5.7 - CSV Virtualization
 - **CSV Virtualization**:

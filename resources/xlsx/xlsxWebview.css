@@ -540,7 +540,8 @@ body.edit-mode td.editable-cell:focus {
 }
 
 .table-scroll {
-    max-height: calc(100vh - 54px);
+    height: calc(100vh - 48px);
+    width: 100%;
     overflow: auto;
     position: relative;
     -webkit-overflow-scrolling: touch;

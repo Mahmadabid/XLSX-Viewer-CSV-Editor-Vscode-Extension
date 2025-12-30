@@ -888,7 +888,18 @@
             const visibleRows = table.querySelectorAll('tbody tr:not(.virtual-spacer)');
             const limit = Math.min(visibleRows.length, 50);
 
-            let colGroupHtml = '<col style="width: 50px;">';
+            // Measure first (row header) column so it can grow to fit content (min 30px)
+            let firstColMax = 30;
+            for (let r = 0; r < limit; r++) {
+                const row = visibleRows[r];
+                const cell = row && row.children && row.children[0];
+                if (cell) {
+                    const width = ctx.measureText(cell.textContent.trim()).width + 24; // include padding
+                    if (width > firstColMax) firstColMax = width;
+                }
+            }
+
+            let colGroupHtml = `<col style="width: ${firstColMax}px;">`;
             headerCells.forEach((th, index) => {
                 let maxWidth = ctx.measureText(th.textContent.trim()).width + 32;
                 for (let r = 0; r < limit; r++) {
@@ -905,7 +916,8 @@
 
             colGroup.innerHTML = colGroupHtml;
             table.style.tableLayout = 'fixed';
-            table.style.width = 'auto';
+            /* Keep table intrinsic so it doesn't expand to fill the viewport */
+            table.style.width = 'max-content';
         } catch (e) {
             console.error('Error adjusting columns:', e);
         }
@@ -1464,7 +1476,7 @@
                 if (table) {
                     const colgroup = table.querySelector('colgroup');
                     if (colgroup) {
-                        let colHtml = '<col style="width: 50px;">';
+                        let colHtml = '<col style="width: 30px;">';
                         for (let i = 0; i < columnCount; i++) {
                             colHtml += '<col style="width: 150px;">';
                         }

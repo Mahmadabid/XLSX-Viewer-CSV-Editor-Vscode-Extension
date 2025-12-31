@@ -5,4 +5,7 @@ node_modules
 *.vsix
 .agent
 info
-.kiro
+.specify
+.github/agents
+.github/prompts
+specs

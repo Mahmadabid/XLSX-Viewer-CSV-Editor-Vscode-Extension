@@ -1,6 +1,6 @@
 # XLSX, CSV & TSV Editor - VS Code Extension
 
-This is an open-source project that allows you to view XLSX files with styles, fonts, and colors from Excel files, supporting multiple sheets. Additionally, it provides a table view and editing capabilities for CSV and TSV files directly in VS Code.
+This is an open-source project that allows you to view and edit XLSX files with styles, fonts, and colors from Excel files, supporting multiple sheets. Additionally, it provides a table view and editing capabilities for CSV and TSV files directly in VS Code.
 
 ## 📌 Overview
 

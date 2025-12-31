@@ -13,7 +13,7 @@ export function convertARGBToRGBA(argb: string): string {
 
 export function isShadeOfBlack(color: string): boolean {
     // Parse RGB/RGBA values
-    const match = color.match(/rgba?KATEX_INLINE_OPEN(\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?KATEX_INLINE_CLOSE/);
+    const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
     if (!match) return false;
     
     const r = parseInt(match[1]);

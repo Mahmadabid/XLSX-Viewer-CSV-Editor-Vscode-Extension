@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.6.1 - Minor Fixes
+- **Minor Fixes**:
+  - Fixed xlsx color issues in vscode mode.
+
 ## v1.6.0 - TSV Support
 - **New Name & Description**:
   - Extension renamed from `XLSX Viewer & CSV Editor` to `XLSX, CSV & TSV Editor` to better reflect its expanded functionality.

@@ -693,20 +693,24 @@ td[style*="border"] {
 }
 
 /* Dark mode cell overrides */
-body.dark-mode td[data-default-bg="true"] {
+body.dark-mode td[data-default-bg="true"],
+body.vscode-theme td[data-default-bg="true"] {
     background-color: var(--bg-color) !important;
 }
 
-body.dark-mode td[data-white-bg="true"] {
+body.dark-mode td[data-white-bg="true"],
+body.vscode-theme td[data-white-bg="true"] {
     background-color: var(--inverted-bg) !important;
     color: var(--inverted-text) !important;
 }
 
-body.dark-mode td[data-default-color="true"][data-default-bg="true"] {
+body.dark-mode td[data-default-color="true"][data-default-bg="true"],
+body.vscode-theme td[data-default-color="true"][data-default-bg="true"] {
     color: var(--text-color) !important;
 }
 
-body.dark-mode td[data-black-border="true"] {
+body.dark-mode td[data-black-border="true"],
+body.vscode-theme td[data-black-border="true"] {
     border-top-color: var(--inverted-border) !important;
     border-right-color: var(--inverted-border) !important;
     border-bottom-color: var(--inverted-border) !important;

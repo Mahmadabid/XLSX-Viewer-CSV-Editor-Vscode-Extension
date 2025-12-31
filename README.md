@@ -1,12 +1,12 @@
-# XLSX & CSV Editor - VS Code Extension
+# XLSX, CSV & TSV Editor - VS Code Extension
 
-This is an open-source project that allows you to view XLSX files with styles, fonts, and colors from Excel files, supporting multiple sheets. Additionally, it provides a table view and editing capabilities for CSV files directly in VS Code.
+This is an open-source project that allows you to view XLSX files with styles, fonts, and colors from Excel files, supporting multiple sheets. Additionally, it provides a table view and editing capabilities for CSV and TSV files directly in VS Code.
 
 ## 📌 Overview
 
-XLSX & CSV Editor is a powerful **Visual Studio Code** extension that allows users to **open, view, and edit Excel files (.xlsx)** and **CSV files directly within VS Code**. It provides a seamless, lightweight experience without requiring external software like Microsoft Excel or Google Sheets.
+XLSX, CSV & TSV Editor is a powerful **Visual Studio Code** extension that allows users to **open, view, and edit Excel files (.xlsx)**, **CSV**, and **TSV files directly within VS Code**. It provides a seamless, lightweight experience without requiring external software like Microsoft Excel or Google Sheets.
 
-**🚨 Important Note**: This extension was previously named **`XLSX Viewer & CSV Editor`**. It has now been renamed to **`XLSX & CSV Editor`** to reflect the added support for CSV file editing.
+**🚨 Important Note**: This extension was previously named **`XLSX Viewer & CSV Editor`**. It has now been renamed to **`XLSX, CSV & TSV Editor`** to reflect the added support for TSV files (in addition to CSV).
 
 ## 🚀 Features
 
@@ -44,19 +44,20 @@ XLSX & CSV Editor is a powerful **Visual Studio Code** extension that allows use
 ✅ **Excel/Google Sheets Compatible Copy** - Copying and pasting preserves cell structure in Excel/Google Sheets\
 ✅ **Improved Selection Management** - Visual feedback for multi-row/column selection and selection size info box in the bottom right corner.
 
-### CSV Editing
-✅ **Table View** - View CSV files in a structured table format\
-✅ **Virtualized Rendering for Large CSVs** - Virtualization (windowed rendering) for large CSV files improves performance and reduces memory usage by rendering only visible rows\
+### CSV & TSV Editing
+✅ **Table View** - View CSV and TSV files in a structured table format\
+✅ **Virtualized Rendering for Large Files** - Virtualization (windowed rendering) improves performance and reduces memory usage by rendering only visible rows for both CSV and TSV files\
 ✅ **Edit Table Mode** - Edit directly in the table with **Save**, **Cancel**, and **Undo/Redo** support\
 ✅ **Excel-like Shortcuts** - <kbd>Ctrl+S</kbd> to save, <kbd>Enter</kbd> to move down, <kbd>Ctrl+Z/Y</kbd> for undo/redo\
 ✅ **Premium UI** - Smooth animations, sticky headers, and Apple-like visual feedback\
-✅ **Edit File** - Open the CSV in VS Code’s default text editor when needed
+✅ **Edit File** - Open the CSV/TSV in VS Code’s default text editor when needed\
 
+**TSV notes:** Copying from the table and pasting into other apps will use tab-delimited data for TSV files; serialization and escaping behave like CSV but use `\t` as the delimiter for TSV.
 ## 🛠️ Installation
 
 1. Open **VS Code**
 2. Go to the **Extensions Marketplace** (`Ctrl+Shift+X`)
-3. Search for `XLSX & CSV Editor`
+3. Search for `XLSX, CSV & TSV Editor`
 4. Click **Install**
 5. Open any `.xlsx` or `.csv` file to start viewing or editing!
 
@@ -96,5 +97,5 @@ If you find this extension helpful, please **rate it on the VS Code Marketplace*
 ---
 
 📢 **Follow us for updates!**\
-🔗 GitHub: [XLSX & CSV Editor Github Link](https://github.com/Mahmadabid/XLSX-Viewer-CSV-Editor-Vscode-Extension)\
+🔗 GitHub: [XLSX, CSV & TSV Editor Github Link](https://github.com/Mahmadabid/XLSX-Viewer-CSV-Editor-Vscode-Extension)\
 🔗 Marketplace: [VS Code Extension Link](https://marketplace.visualstudio.com/items?itemName=muhammad-ahmad.xlsx-viewer)

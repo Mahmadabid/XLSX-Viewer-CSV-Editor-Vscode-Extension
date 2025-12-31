@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.6.0 - TSV Support
+- **New Name & Description**:
+  - Extension renamed from `XLSX Viewer & CSV Editor` to `XLSX, CSV & TSV Editor` to better reflect its expanded functionality.
+- **TSV Support**:
+  - Added a new **TSV Viewer & Editor** with the same features as the CSV editor (table view, in-table Edit/Save/Cancel, virtualization for large files, copy/paste compatible with Excel/Google Sheets using tab delimiters).
+  - The editor toolbar, settings panel, and the **Open in Table View** command now support `.tsv` files.
+
 ## v1.5.9 - Minor Fixes
 - **Minor Fixes**:
   - Fixed table stretching issue when opening CSV files in certain window sizes.
@@ -28,7 +35,7 @@
 
 ## v1.5.4 - XLSX Editing & UI Improvements
 - **New Name & Description**:
-  - Extension renamed from `XLSX Viewer & CSV Editor` to `XLSX & CSV Editor` to better reflect its dual functionality.
+  - Extension renamed from `XLSX Viewer & CSV Editor` to `XLSX, CSV & TSV Editor` to better reflect its expanded functionality.
   - Updated extension description to highlight both XLSX viewing/editing and CSV editing capabilities.
 - **XLSX Editing & Toolbar (New approach)**:
   - Introduced **in-webview table editing** for XLSX files: toggle **Edit** to make changes, then **Save** to persist changes back to the `.xlsx` file or **Cancel** to discard.

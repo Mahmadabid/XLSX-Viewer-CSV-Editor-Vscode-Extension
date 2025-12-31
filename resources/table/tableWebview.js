@@ -51,6 +51,9 @@
         stickyHeader: false
     };
 
+    // Current file format: 'csv' or 'tsv'
+    let fileFormat = 'csv';
+
     // ===== Utilities =====
     function $(id) {
         return document.getElementById(id);
@@ -63,7 +66,8 @@
 
     function escapeCsvCell(value) {
         const v = value ?? '';
-        const needsQuotes = /[",\n\r]/.test(v);
+        // For CSV/TSV we need to escape quotes and newlines; also treat tab as special when serializing TSV
+        const needsQuotes = /["\t,\n\r]/.test(v);
         if (!needsQuotes) return v;
         return '"' + v.replace(/"/g, '""') + '"';
     }
@@ -582,6 +586,7 @@
 
     function serializeTableToCsv() {
         const rows = [];
+        const delimiter = fileFormat === 'tsv' ? '\t' : ',';
 
         for (let i = 0; i < totalRows; i++) {
             const rowData = rowCache.get(i) || [];
@@ -590,7 +595,7 @@
                 const value = normalizeCellText(rowData[j] || '');
                 row.push(escapeCsvCell(value));
             }
-            rows.push(row.join(','));
+            rows.push(row.join(delimiter));
         }
 
         return rows.join('\n') + (rows.length ? '\n' : '');
@@ -1465,6 +1470,9 @@
             case 'initVirtualTable':
                 const loading = $('loadingIndicator');
                 if (loading) loading.style.display = 'none';
+
+                // Set current format (csv or tsv)
+                fileFormat = m.format || 'csv';
 
                 totalRows = m.totalRows || 0;
                 columnCount = m.columnCount || 0;

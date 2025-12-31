@@ -693,23 +693,44 @@ td[style*="border"] {
 }
 
 /* Dark mode cell overrides */
-body.dark-mode td[data-default-bg="true"],
-body.vscode-theme td[data-default-bg="true"] {
+body.dark-mode td[data-default-bg="true"] {
     background-color: var(--bg-color) !important;
-}
+} 
 
-body.dark-mode td[data-white-bg="true"],
-body.vscode-theme td[data-white-bg="true"] {
+body.dark-mode td[data-white-bg="true"] {
     background-color: var(--inverted-bg) !important;
     color: var(--inverted-text) !important;
+    border-top-color: var(--border-color) !important;
+    border-right-color: var(--border-color) !important;
+    border-bottom-color: var(--border-color) !important;
+    border-left-color: var(--border-color) !important;
+} 
+
+body.dark-mode td[data-default-color="true"][data-default-bg="true"] {
+    color: var(--text-color) !important;
+} 
+
+body.dark-mode td[data-black-border="true"] {
+    border-top-color: var(--inverted-border) !important;
+    border-right-color: var(--inverted-border) !important;
+    border-bottom-color: var(--inverted-border) !important;
+    border-left-color: var(--inverted-border) !important;
+} 
+
+/* VS Code theme — treat white-background cells like normal cells so they adapt theme */
+body.vscode-theme td[data-white-bg="true"] {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+    border-top-color: var(--border-color) !important;
+    border-right-color: var(--border-color) !important;
+    border-bottom-color: var(--border-color) !important;
+    border-left-color: var(--border-color) !important;
 }
 
-body.dark-mode td[data-default-color="true"][data-default-bg="true"],
 body.vscode-theme td[data-default-color="true"][data-default-bg="true"] {
     color: var(--text-color) !important;
 }
 
-body.dark-mode td[data-black-border="true"],
 body.vscode-theme td[data-black-border="true"] {
     border-top-color: var(--inverted-border) !important;
     border-right-color: var(--inverted-border) !important;
@@ -717,28 +738,6 @@ body.vscode-theme td[data-black-border="true"] {
     border-left-color: var(--inverted-border) !important;
 }
 
-/* Merged cells */
-td.merged-cell {
-    position: relative;
-    padding: 0;
-    z-index: 3;
-}
-
-td.merged-cell .cell-content {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 2px 4px;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-}
 
 td.merged-cell[style*="vertical-align: top"] .cell-content {
     align-items: flex-start;

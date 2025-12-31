@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.6.2 - Minor Fixes
+- **Minor Fixes**:
+  - Fixed xlsx color issues in vscode/dark mode.
+
 ## v1.6.1 - Minor Fixes
 - **Minor Fixes**:
   - Fixed xlsx color issues in vscode mode.

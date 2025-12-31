@@ -2,21 +2,21 @@
   "name": "xlsx-viewer",
   "displayName": "XLSX, CSV & TSV Editor",
   "description": "View and edit XLSX files with colors, fonts and styles from Excel files (supporting in-table editing), and view and edit CSV  & TSV files in VS Code. This is an open-source project.",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "publisher": "muhammad-ahmad",
   "engines": {
     "vscode": "^1.60.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Mahmadabid/XLSX-Viewer-CSV-Editor-Vscode-Extension"
+    "url": "https://github.com/Mahmadabid/XLSX-CSV-TSV-Editor-Vscode-Extension"
   },
   "keywords": [
     "xlsx",
     "excel",
-    "csv", 
-    "office",   
-    "tsv",    
+    "csv",
+    "office",
+    "tsv",
     "spreadsheet",
     "viewer",
     "editor",

@@ -1130,3 +1130,26 @@ body.plain-view td.column-selected,
 body.plain-view td.row-selected {
     box-shadow: inset 0 0 0 1000px var(--selection-bg) !important;
 }
+
+/* Plain view header row styling (matches CSV behavior) */
+body.plain-view.first-row-as-header tbody tr.header-row td {
+    font-weight: 700 !important;
+    background-color: var(--header-bg) !important;
+}
+
+/* Plain view sticky header (matches CSV behavior) */
+body.plain-view.sticky-header-enabled tbody tr.header-row td,
+body.plain-view.sticky-header-enabled tbody tr.header-row th {
+    position: sticky;
+    top: 34px;
+    z-index: 10;
+    background-color: var(--header-bg) !important;
+}
+
+body.plain-view.sticky-header-enabled tbody tr.header-row th.row-header {
+    position: sticky;
+    top: 34px;
+    left: 0;
+    z-index: 30;
+    background-color: var(--header-bg) !important;
+}

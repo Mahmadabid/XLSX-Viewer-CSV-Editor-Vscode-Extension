@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.6.4 - Plain View Styling & Repository Update
+- **Plain View Styling**:
+  - Fixed header row styling in plain view mode to match CSV behavior (bold text with header background).
+  - Sticky header now properly displays with theme colors in plain view mode.
+- **Repository Update**:
+  - Updated GitHub repository URL to `https://github.com/Mahmadabid/XLSX-CSV-TSV-Editor-Vscode-Extension`.
+
 ## v1.6.3 - XLSX Plain View & Virtualization
 - **Plain View Mode**:
   - Added **Plain View** button to XLSX toolbar that removes all Excel styling (colors, fonts, borders) and displays data like CSV/TSV.

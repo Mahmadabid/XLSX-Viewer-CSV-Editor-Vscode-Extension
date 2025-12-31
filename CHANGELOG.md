@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.6.3 - XLSX Plain View & Virtualization
+- **Plain View Mode**:
+  - Added **Plain View** button to XLSX toolbar that removes all Excel styling (colors, fonts, borders) and displays data like CSV/TSV.
+  - Toggle between styled and plain view for cleaner data inspection.
+- **XLSX Virtualization**:
+  - Added virtualization (windowed rendering) for XLSX files to drastically improve performance and reduce memory usage when opening large spreadsheets.
+  - Implemented virtual scrolling and adaptive row rendering so only visible rows are rendered at any time.
+
 ## v1.6.2 - Minor Fixes
 - **Minor Fixes**:
   - Fixed xlsx color issues in vscode/dark mode.

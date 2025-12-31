@@ -3,9 +3,29 @@
 (function () {
     const vscode = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : { postMessage: () => { } };
 
+    // ===== Virtual Scrolling Configuration =====
+    const ROW_HEIGHT = 28;
+    const BUFFER_ROWS = 20;
+    const CHUNK_SIZE = 100;
+
     // Data injected from the extension via postMessage
-    let worksheetsData = [];
+    let worksheetsMeta = [];
     let currentWorksheet = 0;
+
+    // Virtual scrolling state
+    let totalRows = 0;
+    let columnCount = 0;
+    let columnWidths = [];
+    let mergedCells = [];
+    let allRowHeights = []; // Pre-loaded row heights from extension
+    let totalContentHeight = 0; // Pre-calculated total height
+    let rowCache = new Map();
+    let pendingRequests = new Map();
+    let currentVisibleStart = 0;
+    let currentVisibleEnd = 0;
+    let isRequestingRows = false;
+    let scrollDebounceTimer = null;
+    let isRendering = false; // Prevent re-render during render
 
     // Selection state
     let selectedCells = new Set();
@@ -17,6 +37,10 @@
     let selectedColumns = new Set();
     let lastSelectedRow = null;
     let lastSelectedColumn = null;
+
+    // Track selected row/column indices for full copy (virtualization support)
+    let selectedRowIndices = new Set();
+    let selectedColumnIndices = new Set();
 
     // Resize state
     let isResizing = false;
@@ -47,6 +71,9 @@
     // Save state (CSV-parity)
     let isSaving = false;
     let exitAfterSave = false;
+
+    // Plain view mode (removes all XLSX styling)
+    let isPlainView = false;
 
     // Hyperlink hover tooltip
     let linkTooltip = null;
@@ -159,87 +186,338 @@
         return css;
     }
 
-    function createTable(worksheetData) {
-        const data = worksheetData.data;
+    // ===== Virtual Scrolling Core =====
 
-        let html = '<div class="table-scroll"><table>';
+    function getTableContainer() {
+        return document.querySelector('.table-scroll');
+    }
+
+    function requestRows(start, end, timeout = 10000) {
+        return new Promise((resolve) => {
+            const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            pendingRequests.set(requestId, { resolve, start, end });
+
+            vscode.postMessage({
+                command: 'getRows',
+                start,
+                end,
+                requestId,
+                sheetIndex: currentWorksheet
+            });
+
+            setTimeout(() => {
+                if (pendingRequests.has(requestId)) {
+                    console.warn(`Request ${requestId} timed out for rows ${start}-${end}`);
+                    pendingRequests.delete(requestId);
+                    resolve([]);
+                }
+            }, timeout);
+        });
+    }
+
+    function requestAllRows() {
+        return requestRows(0, totalRows, 30000);
+    }
+
+    function createRowHtml(rowData, rowIndex) {
+        const height = rowData.height || ROW_HEIGHT;
+        const isHeaderRow = rowIndex === 0;
+
+        let html = '<tr data-virtual-row="' + rowIndex + '" style="height: ' + height + 'px;"' + (isHeaderRow ? ' class="header-row"' : '') + '>';
+        html += '<th class="row-header" data-row="' + rowIndex + '" style="height: ' + height + 'px;">';
+        html += rowData.rowNumber || (rowIndex + 1);
+        html += '<div class="row-resize-handle" data-row="' + rowIndex + '"></div>';
+        html += '</th>';
+
+        let virtualColIndex = 0;
+        for (let actualCol = 1; actualCol <= columnCount; actualCol++) {
+            const cellData = rowData.cells ? rowData.cells.find(cell => cell.colNumber === actualCol) : null;
+
+            if (cellData) {
+                // In plain view mode, skip all styling
+                const styleStr = isPlainView ? '' : formatCellStyle(cellData.style || {});
+                const cellHeight = height * (cellData.rowspan || 1);
+                const cellWidth = columnWidths
+                    .slice(actualCol - 1, actualCol - 1 + (cellData.colspan || 1))
+                    .reduce((sum, w) => sum + (w || 80), 0);
+
+                html += '<td';
+                html += ' data-row="' + rowIndex + '"';
+                html += ' data-col="' + virtualColIndex + '"';
+                html += ' data-rownum="' + cellData.rowNumber + '"';
+                html += ' data-colnum="' + cellData.colNumber + '"';
+                
+                // Only add styling data attributes if not in plain view
+                if (!isPlainView) {
+                    if (cellData.hasDefaultBg) html += ' data-default-bg="true"';
+                    if (cellData.hasWhiteBackground) html += ' data-white-bg="true"';
+                    if (cellData.isDefaultColor) html += ' data-default-color="true"';
+                    if (cellData.hasBlackBorder) html += ' data-black-border="true"';
+                    if (cellData.hasWhiteBorder) html += ' data-white-border="true"';
+                    if (cellData.hasBlackBackground) html += ' data-black-bg="true"';
+                    if (cellData.hasDefaultBorder) html += ' data-default-border="true"';
+                }
+                if (cellData.isEmpty) html += ' data-empty="true"';
+                if (cellData.hyperlink) html += ' data-hyperlink="' + String(cellData.hyperlink).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;') + '"';
+                html += ' data-original-color="' + (cellData.originalColor || 'rgb(0, 0, 0)') + '"';
+
+                // Skip rowspan/colspan in plain view for simpler display
+                if (!isPlainView) {
+                    if (cellData.rowspan > 1) html += ' rowspan="' + cellData.rowspan + '"';
+                    if (cellData.colspan > 1) html += ' colspan="' + cellData.colspan + '"';
+                    if (cellData.isMerged) html += ' class="merged-cell"';
+                }
+
+                let cellStyleStr = styleStr;
+                if (!isPlainView && cellData.isMerged) {
+                    cellStyleStr += 'height: ' + cellHeight + 'px; width: ' + cellWidth + 'px;';
+                } else {
+                    cellStyleStr += 'height: ' + height + 'px;';
+                }
+
+                if (isEditMode) {
+                    html += ' contenteditable="true" spellcheck="false"';
+                }
+
+                if (cellStyleStr) {
+                    html += ' style="' + cellStyleStr + '"';
+                }
+                html += '>';
+                html += '<span class="cell-content">' + (cellData.value || '&nbsp;') + '</span>';
+                html += '</td>';
+            } else {
+                // Empty cell - include all data attributes for proper theme styling
+                html += '<td data-row="' + rowIndex + '" data-col="' + virtualColIndex + '"';
+                html += ' data-rownum="' + (rowIndex + 1) + '"';
+                html += ' data-colnum="' + actualCol + '"';
+                if (!isPlainView) {
+                    html += ' data-default-bg="true" data-default-color="true" data-default-border="true"';
+                }
+                html += ' data-empty="true"';
+                html += ' data-original-color="rgb(0, 0, 0)"';
+                if (isEditMode) {
+                    html += ' contenteditable="true" spellcheck="false"';
+                }
+                html += ' style="height: ' + height + 'px;">';
+                html += '<span class="cell-content">&nbsp;</span>';
+                html += '</td>';
+            }
+            virtualColIndex++;
+        }
+
+        html += '</tr>';
+        return html;
+    }
+
+    function renderVirtualRows(startIndex, endIndex, rowsData) {
+        if (isRendering) return;
+        isRendering = true;
+
+        const tbody = document.querySelector('#xlsxTable tbody');
+        if (!tbody) {
+            isRendering = false;
+            return;
+        }
+
+        // Cache rows
+        rowsData.forEach((row, i) => {
+            rowCache.set(startIndex + i, row);
+        });
+
+        // Calculate spacer heights using pre-loaded heights (stable)
+        let topSpacerHeight = 0;
+        for (let i = 0; i < startIndex; i++) {
+            topSpacerHeight += allRowHeights[i] || ROW_HEIGHT;
+        }
+
+        let bottomSpacerHeight = 0;
+        for (let i = endIndex; i < totalRows; i++) {
+            bottomSpacerHeight += allRowHeights[i] || ROW_HEIGHT;
+        }
+
+        let html = '';
+
+        if (topSpacerHeight > 0) {
+            html += '<tr class="virtual-spacer top-spacer"><td colspan="' + (columnCount + 1) + '" style="height: ' + topSpacerHeight + 'px; padding: 0; border: none;"></td></tr>';
+        }
+
+        for (let i = startIndex; i < endIndex; i++) {
+            const rowData = rowCache.get(i) || { cells: [], rowNumber: i + 1 };
+            html += createRowHtml(rowData, i);
+        }
+
+        if (bottomSpacerHeight > 0) {
+            html += '<tr class="virtual-spacer bottom-spacer"><td colspan="' + (columnCount + 1) + '" style="height: ' + bottomSpacerHeight + 'px; padding: 0; border: none;"></td></tr>';
+        }
+
+        tbody.innerHTML = html;
+        reapplySelection();
+        isRendering = false;
+    }
+
+    async function updateVisibleRows() {
+        if (isRendering) return;
+        
+        const container = getTableContainer();
+        if (!container || totalRows === 0) return;
+
+        const scrollTop = container.scrollTop;
+        const clientHeight = container.clientHeight;
+
+        // Calculate which rows are visible using pre-loaded heights
+        let accumulatedHeight = 0;
+        let firstVisibleRow = 0;
+        
+        for (let i = 0; i < totalRows; i++) {
+            const rowHeight = allRowHeights[i] || ROW_HEIGHT;
+            if (accumulatedHeight + rowHeight > scrollTop) {
+                firstVisibleRow = i;
+                break;
+            }
+            accumulatedHeight += rowHeight;
+            if (i === totalRows - 1) {
+                firstVisibleRow = totalRows - 1;
+            }
+        }
+        
+        // Find last visible row
+        let lastVisibleRow = firstVisibleRow;
+        let visibleHeight = 0;
+        for (let i = firstVisibleRow; i < totalRows; i++) {
+            const rowHeight = allRowHeights[i] || ROW_HEIGHT;
+            visibleHeight += rowHeight;
+            lastVisibleRow = i + 1;
+            if (visibleHeight >= clientHeight) {
+                break;
+            }
+        }
+
+        // Add buffer
+        const bufferedStart = Math.max(0, firstVisibleRow - BUFFER_ROWS);
+        const bufferedEnd = Math.min(totalRows, lastVisibleRow + BUFFER_ROWS);
+
+        // Align to chunk boundaries
+        let chunkStart = Math.floor(bufferedStart / CHUNK_SIZE) * CHUNK_SIZE;
+        let chunkEnd = Math.ceil(bufferedEnd / CHUNK_SIZE) * CHUNK_SIZE;
+        
+        // Clamp to totalRows
+        chunkEnd = Math.min(totalRows, chunkEnd);
+
+        // CRITICAL FIX: If we're within 2 chunks of the end, just render to the end
+        // This prevents fluctuation at boundaries like 2224 rows (22.24 chunks)
+        const remainingRows = totalRows - chunkEnd;
+        if (remainingRows > 0 && remainingRows < CHUNK_SIZE * 2) {
+            chunkEnd = totalRows;
+        }
+
+        // Skip if we're already showing these rows (with some tolerance)
+        if (chunkStart === currentVisibleStart && chunkEnd === currentVisibleEnd) {
+            return;
+        }
+
+        // Check if current range still covers what we need
+        if (currentVisibleStart <= bufferedStart && currentVisibleEnd >= bufferedEnd) {
+            return; // Current render still covers visible area
+        }
+
+        let needsFetch = false;
+        for (let i = chunkStart; i < chunkEnd; i++) {
+            if (!rowCache.has(i)) {
+                needsFetch = true;
+                break;
+            }
+        }
+
+        if (needsFetch && !isRequestingRows) {
+            isRequestingRows = true;
+
+            try {
+                const rows = await requestRows(chunkStart, chunkEnd);
+
+                if (rows && rows.length > 0) {
+                    currentVisibleStart = chunkStart;
+                    currentVisibleEnd = chunkStart + rows.length;
+                    renderVirtualRows(chunkStart, chunkStart + rows.length, rows);
+                }
+            } finally {
+                isRequestingRows = false;
+            }
+        } else if (!needsFetch) {
+            currentVisibleStart = chunkStart;
+            currentVisibleEnd = chunkEnd;
+
+            const cachedRows = [];
+            for (let i = chunkStart; i < chunkEnd; i++) {
+                cachedRows.push(rowCache.get(i) || { cells: [], rowNumber: i + 1 });
+            }
+            renderVirtualRows(chunkStart, chunkEnd, cachedRows);
+        }
+    }
+
+    function onScroll() {
+        if (scrollDebounceTimer) {
+            clearTimeout(scrollDebounceTimer);
+        }
+        scrollDebounceTimer = setTimeout(() => {
+            updateVisibleRows();
+        }, 50); // Increased debounce to reduce fluctuation
+    }
+
+    function initializeVirtualScrolling() {
+        const container = getTableContainer();
+        if (!container) return;
+
+        // Remove any existing listener first
+        container.removeEventListener('scroll', onScroll);
+        container.addEventListener('scroll', onScroll, { passive: true });
+        updateVisibleRows();
+    }
+
+    function reapplySelection() {
+        // Re-apply column selection
+        selectedColumnIndices.forEach(colIdx => {
+            document.querySelectorAll('td[data-col="' + colIdx + '"], th[data-col="' + colIdx + '"]').forEach((cell) => {
+                cell.classList.add('column-selected');
+                if (cell.tagName === 'TD') selectedCells.add(cell);
+            });
+        });
+
+        // Re-apply row selection
+        selectedRowIndices.forEach(rowIdx => {
+            document.querySelectorAll('td[data-row="' + rowIdx + '"], th[data-row="' + rowIdx + '"]').forEach((cell) => {
+                cell.classList.add('row-selected');
+                if (cell.tagName === 'TD') selectedCells.add(cell);
+            });
+        });
+
+        // Re-apply active cell
+        if (activeCell) {
+            const row = activeCell.dataset?.row;
+            const col = activeCell.dataset?.col;
+            if (row !== undefined && col !== undefined) {
+                const newCell = document.querySelector('td[data-row="' + row + '"][data-col="' + col + '"]');
+                if (newCell) {
+                    newCell.classList.add('active-cell');
+                    activeCell = newCell;
+                }
+            }
+        }
+    }
+
+    function createTableShell() {
+        let html = '<div class="table-scroll"><table id="xlsxTable">';
 
         // Header row
         html += '<thead><tr>';
         html += '<th class="corner-cell"></th>';
-        for (let c = 1; c <= data.maxCol; c++) {
-            const width = data.columnWidths[c - 1] || 80;
+        for (let c = 1; c <= columnCount; c++) {
+            const width = columnWidths[c - 1] || 80;
             html += '<th class="col-header" data-col="' + (c - 1) + '" style="width: ' + width + 'px; min-width: ' + width + 'px;">';
             html += getExcelColumnLabel(c);
             html += '<div class="col-resize-handle" data-col="' + (c - 1) + '"></div>';
             html += '</th>';
         }
-        html += '</tr></thead><tbody>';
-
-        // Data rows
-        data.rows.forEach((row, rowIndex) => {
-            const height = row.height || 20;
-            const isHeaderRow = rowIndex === 0;
-            html += '<tr style="height: ' + height + 'px;"' + (isHeaderRow ? ' class="header-row"' : '') + '>';
-            html += '<th class="row-header" data-row="' + rowIndex + '" style="height: ' + height + 'px;">';
-            html += row.rowNumber;
-            html += '<div class="row-resize-handle" data-row="' + rowIndex + '"></div>';
-            html += '</th>';
-
-            // Create a virtual column index to account for merged cells
-            let virtualColIndex = 0;
-
-            for (let actualCol = 1; actualCol <= data.maxCol; actualCol++) {
-                // Find the cell data for this actual column
-                const cellData = row.cells.find(cell => cell.colNumber === actualCol);
-
-                if (cellData) {
-                    const styleStr = formatCellStyle(cellData.style);
-                    const cellHeight = height * cellData.rowspan;
-                    const cellWidth = data.columnWidths
-                        .slice(actualCol - 1, actualCol - 1 + cellData.colspan)
-                        .reduce((sum, w) => sum + (w || 80), 0);
-
-                    html += '<td';
-                    html += ' data-row="' + rowIndex + '"';
-                    html += ' data-col="' + virtualColIndex + '"';
-                    html += ' data-rownum="' + cellData.rowNumber + '"';
-                    html += ' data-colnum="' + cellData.colNumber + '"';
-                    if (cellData.hasDefaultBg) html += ' data-default-bg="true"';
-                    if (cellData.hasWhiteBackground) html += ' data-white-bg="true"';
-                    if (cellData.isDefaultColor) html += ' data-default-color="true"';
-                    if (cellData.hasBlackBorder) html += ' data-black-border="true"';
-                    if (cellData.hasBlackBackground) html += ' data-black-bg="true"';
-                    if (cellData.isEmpty) html += ' data-empty="true"';
-                    if (cellData.hyperlink) html += ' data-hyperlink="' + String(cellData.hyperlink).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;') + '"';
-                    html += ' data-original-color="' + cellData.originalColor + '"';
-
-                    // Add rowspan and colspan for merged cells
-                    if (cellData.rowspan > 1) html += ' rowspan="' + cellData.rowspan + '"';
-                    if (cellData.colspan > 1) html += ' colspan="' + cellData.colspan + '"';
-                    if (cellData.isMerged) html += ' class="merged-cell"';
-
-                    // Set explicit height and width for merged cells
-                    let cellStyleStr = styleStr;
-                    if (cellData.isMerged) {
-                        cellStyleStr += 'height: ' + cellHeight + 'px; width: ' + cellWidth + 'px;';
-                    } else {
-                        cellStyleStr += 'height: ' + height + 'px;';
-                    }
-
-                    html += ' style="' + cellStyleStr + '"';
-                    html += '>';
-                    html += '<span class="cell-content">' + (cellData.value || '&nbsp;') + '</span>';
-                    html += '</td>';
-                }
-
-                virtualColIndex++;
-            }
-
-            html += '</tr>';
-        });
-
-        html += '</tbody></table></div>';
+        html += '</tr></thead><tbody></tbody></table></div>';
         return html;
     }
 
@@ -284,19 +562,40 @@
     }
 
     function renderWorksheet(index) {
-        if (!worksheetsData || !worksheetsData.length) return;
+        if (!worksheetsMeta || !worksheetsMeta.length) return;
 
         showLoading();
+
+        // Reset virtual scrolling state for new worksheet
+        rowCache.clear();
+        currentVisibleStart = 0;
+        currentVisibleEnd = 0;
+        pendingRequests.clear();
+        isRendering = false;
+
+        const wsMeta = worksheetsMeta[index];
+        totalRows = wsMeta.totalRows || 0;
+        columnCount = wsMeta.columnCount || 0;
+        columnWidths = wsMeta.columnWidths || [];
+        mergedCells = wsMeta.mergedCells || [];
+        allRowHeights = wsMeta.rowHeights || [];
+        
+        // Pre-calculate total content height for stable scrolling
+        totalContentHeight = 0;
+        for (let i = 0; i < totalRows; i++) {
+            totalContentHeight += allRowHeights[i] || ROW_HEIGHT;
+        }
 
         // Allow the overlay to render
         setTimeout(() => {
             const container = document.getElementById('tableContainer');
             if (!container) return;
 
-            container.innerHTML = createTable(worksheetsData[index]);
+            container.innerHTML = createTableShell();
             initializeSelection();
             initializeResize();
             initializeHyperlinkHover();
+            initializeVirtualScrolling();
             hideLoading();
         }, 100);
     }
@@ -503,6 +802,8 @@
         selectedCells.clear();
         selectedRows.clear();
         selectedColumns.clear();
+        selectedRowIndices.clear();
+        selectedColumnIndices.clear();
         activeCell = null;
         lastSelectedRow = null;
         lastSelectedColumn = null;
@@ -567,6 +868,7 @@
             for (let row = minRow; row <= maxRow; row++) {
                 if (!selectedRows.has(row)) {
                     selectedRows.add(row);
+                    selectedRowIndices.add(row);
                     const cells = document.querySelectorAll('td[data-row="' + row + '"], th[data-row="' + row + '"]');
                     cells.forEach(cell => {
                         cell.classList.add('row-selected');
@@ -579,6 +881,7 @@
         } else if (ctrlKey) {
             if (selectedRows.has(rowIndex)) {
                 selectedRows.delete(rowIndex);
+                selectedRowIndices.delete(rowIndex);
                 const cells = document.querySelectorAll('td[data-row="' + rowIndex + '"], th[data-row="' + rowIndex + '"]');
                 cells.forEach(cell => {
                     cell.classList.remove('row-selected');
@@ -586,6 +889,7 @@
                 });
             } else {
                 selectedRows.add(rowIndex);
+                selectedRowIndices.add(rowIndex);
                 const cells = document.querySelectorAll('td[data-row="' + rowIndex + '"], th[data-row="' + rowIndex + '"]');
                 cells.forEach(cell => {
                     cell.classList.add('row-selected');
@@ -596,6 +900,7 @@
             }
         } else {
             selectedRows.add(rowIndex);
+            selectedRowIndices.add(rowIndex);
             const cells = document.querySelectorAll('td[data-row="' + rowIndex + '"], th[data-row="' + rowIndex + '"]');
             cells.forEach(cell => {
                 cell.classList.add('row-selected');
@@ -625,6 +930,7 @@
             for (let col = minCol; col <= maxCol; col++) {
                 if (!selectedColumns.has(col)) {
                     selectedColumns.add(col);
+                    selectedColumnIndices.add(col);
                     const cells = document.querySelectorAll('td[data-col="' + col + '"], th[data-col="' + col + '"]');
                     cells.forEach(cell => {
                         cell.classList.add('column-selected');
@@ -637,6 +943,7 @@
         } else if (ctrlKey) {
             if (selectedColumns.has(colIndex)) {
                 selectedColumns.delete(colIndex);
+                selectedColumnIndices.delete(colIndex);
                 const cells = document.querySelectorAll('td[data-col="' + colIndex + '"], th[data-col="' + colIndex + '"]');
                 cells.forEach(cell => {
                     cell.classList.remove('column-selected');
@@ -644,6 +951,7 @@
                 });
             } else {
                 selectedColumns.add(colIndex);
+                selectedColumnIndices.add(colIndex);
                 const cells = document.querySelectorAll('td[data-col="' + colIndex + '"], th[data-col="' + colIndex + '"]');
                 cells.forEach(cell => {
                     cell.classList.add('column-selected');
@@ -654,6 +962,7 @@
             }
         } else {
             selectedColumns.add(colIndex);
+            selectedColumnIndices.add(colIndex);
             const cells = document.querySelectorAll('td[data-col="' + colIndex + '"], th[data-col="' + colIndex + '"]');
             cells.forEach(cell => {
                 cell.classList.add('column-selected');
@@ -670,7 +979,21 @@
         const info = document.getElementById('selectionInfo');
         if (!info) return;
 
-        if (selectedCells.size > 1) {
+        // For full column/row selection, show total counts
+        if (selectedColumnIndices.size > 0 || selectedRowIndices.size > 0) {
+            let rowCount = selectedRowIndices.size > 0 ? selectedRowIndices.size : totalRows;
+            let colCount = selectedColumnIndices.size > 0 ? selectedColumnIndices.size : columnCount;
+
+            if (selectedRowIndices.size > 0 && selectedColumnIndices.size === 0) {
+                colCount = columnCount;
+            }
+            if (selectedColumnIndices.size > 0 && selectedRowIndices.size === 0) {
+                rowCount = totalRows;
+            }
+
+            info.textContent = rowCount + 'R × ' + colCount + 'C';
+            info.style.display = 'block';
+        } else if (selectedCells.size > 1) {
             const rows = new Set();
             const cols = new Set();
             selectedCells.forEach(cell => {
@@ -689,63 +1012,128 @@
     }
 
     async function copySelectionToClipboard() {
-        if (!selectedCells || selectedCells.size === 0) return;
+        const hasFullColumnSelection = selectedColumnIndices.size > 0;
+        const hasFullRowSelection = selectedRowIndices.size > 0;
+
+        if (!hasFullColumnSelection && !hasFullRowSelection && selectedCells.size === 0) return;
         if (isCopying) return;
 
         isCopying = true;
-        const CHUNK_SIZE = 2000;
 
         try {
             showToast('Copying...');
             await yieldToMain();
 
-            const cellsArray = Array.from(selectedCells);
-            const totalCells = cellsArray.length;
-            const rowSet = new Set();
-            const colSet = new Set();
+            let outputLines = [];
 
-            for (let i = 0; i < totalCells; i++) {
-                const td = cellsArray[i];
-                const r = parseInt(td.dataset.row, 10);
-                const c = parseInt(td.dataset.col, 10);
-                if (!isNaN(r) && !isNaN(c)) {
-                    rowSet.add(r);
-                    colSet.add(c);
+            if (hasFullColumnSelection || hasFullRowSelection) {
+                // Need to fetch all rows for complete copy
+                const allRows = await requestAllRows();
+
+                if (!allRows || allRows.length === 0) {
+                    showToast('Failed to fetch data');
+                    isCopying = false;
+                    return;
                 }
-                if ((i + 1) % CHUNK_SIZE === 0) {
-                    await yieldToMain();
+
+                // Cache the fetched rows
+                if (allRows.length >= totalRows * 0.9) {
+                    allRows.forEach((row, i) => {
+                        rowCache.set(i, row);
+                    });
                 }
+
+                const rowCount = allRows.length;
+
+                if (hasFullColumnSelection && !hasFullRowSelection) {
+                    // Copy entire columns
+                    const sortedCols = Array.from(selectedColumnIndices).sort((a, b) => a - b);
+
+                    for (let r = 0; r < rowCount; r++) {
+                        const rowData = allRows[r] || { cells: [] };
+                        const lineParts = sortedCols.map(c => {
+                            const cellData = rowData.cells ? rowData.cells.find(cell => cell.colNumber === c + 1) : null;
+                            return cellData ? normalizeCellText(cellData.value || '') : '';
+                        });
+                        outputLines.push(lineParts.join('\t'));
+                    }
+                } else if (hasFullRowSelection && !hasFullColumnSelection) {
+                    // Copy entire rows
+                    const sortedRows = Array.from(selectedRowIndices).sort((a, b) => a - b);
+
+                    for (const r of sortedRows) {
+                        if (r < rowCount) {
+                            const rowData = allRows[r] || { cells: [] };
+                            const lineParts = [];
+                            for (let c = 0; c < columnCount; c++) {
+                                const cellData = rowData.cells ? rowData.cells.find(cell => cell.colNumber === c + 1) : null;
+                                lineParts.push(cellData ? normalizeCellText(cellData.value || '') : '');
+                            }
+                            outputLines.push(lineParts.join('\t'));
+                        }
+                    }
+                } else {
+                    // Both rows and columns selected - intersection
+                    const sortedRows = Array.from(selectedRowIndices).sort((a, b) => a - b);
+                    const sortedCols = Array.from(selectedColumnIndices).sort((a, b) => a - b);
+
+                    for (const r of sortedRows) {
+                        if (r < rowCount) {
+                            const rowData = allRows[r] || { cells: [] };
+                            const lineParts = sortedCols.map(c => {
+                                const cellData = rowData.cells ? rowData.cells.find(cell => cell.colNumber === c + 1) : null;
+                                return cellData ? normalizeCellText(cellData.value || '') : '';
+                            });
+                            outputLines.push(lineParts.join('\t'));
+                        }
+                    }
+                }
+
+                const cellCount = hasFullColumnSelection ?
+                    rowCount * selectedColumnIndices.size :
+                    (hasFullRowSelection ? selectedRowIndices.size * columnCount : 0);
+
+                const tsv = outputLines.join('\n');
+                await writeToClipboardAsync(tsv);
+
+                selectedCells.forEach(cell => cell.classList.add('copying'));
+                setTimeout(() => selectedCells.forEach(cell => cell.classList.remove('copying')), 300);
+
+                showToast('Copied ' + cellCount + ' cells');
+            } else {
+                // Regular cell selection - use DOM/cache
+                const cellsArray = Array.from(selectedCells);
+                const rowSet = new Set();
+                const colSet = new Set();
+
+                cellsArray.forEach(td => {
+                    const r = parseInt(td.dataset.row, 10);
+                    const c = parseInt(td.dataset.col, 10);
+                    if (!isNaN(r) && !isNaN(c)) {
+                        rowSet.add(r);
+                        colSet.add(c);
+                    }
+                });
+
+                const sortedRows = Array.from(rowSet).sort((a, b) => a - b);
+                const sortedCols = Array.from(colSet).sort((a, b) => a - b);
+
+                for (const r of sortedRows) {
+                    const lineParts = sortedCols.map(c => {
+                        const cell = document.querySelector('td[data-row="' + r + '"][data-col="' + c + '"]');
+                        return normalizeCellText(cell ? (cell.textContent || '') : '');
+                    });
+                    outputLines.push(lineParts.join('\t'));
+                }
+
+                const tsv = outputLines.join('\n');
+                await writeToClipboardAsync(tsv);
+
+                selectedCells.forEach(cell => cell.classList.add('copying'));
+                setTimeout(() => selectedCells.forEach(cell => cell.classList.remove('copying')), 300);
+
+                showToast('Copied ' + cellsArray.length + ' cells');
             }
-
-            await yieldToMain();
-
-            const sortedRows = Array.from(rowSet).sort((a, b) => a - b);
-            const sortedCols = Array.from(colSet).sort((a, b) => a - b);
-            const outputLines = new Array(sortedRows.length);
-
-            for (let i = 0; i < sortedRows.length; i++) {
-                const r = sortedRows[i];
-                const lineParts = new Array(sortedCols.length);
-                for (let j = 0; j < sortedCols.length; j++) {
-                    const c = sortedCols[j];
-                    const cell = document.querySelector('td[data-row="' + r + '"][data-col="' + c + '"]');
-                    lineParts[j] = normalizeCellText(cell ? (cell.textContent || '') : '');
-                }
-                outputLines[i] = lineParts.join('\t');
-                if ((i + 1) % CHUNK_SIZE === 0) {
-                    await yieldToMain();
-                }
-            }
-
-            await yieldToMain();
-
-            const tsv = outputLines.join('\n');
-            await writeToClipboardAsync(tsv);
-
-            selectedCells.forEach(cell => cell.classList.add('copying'));
-            setTimeout(() => selectedCells.forEach(cell => cell.classList.remove('copying')), 300);
-
-            showToast('Copied ' + totalCells + ' cells');
         } catch (err) {
             console.error('Copy operation failed:', err);
             showToast('Copy failed');
@@ -1213,6 +1601,7 @@
 
         const sheetSelector = document.getElementById('sheetSelector');
         const toggleExpandButton = document.getElementById('toggleExpandButton');
+        const togglePlainViewButton = document.getElementById('togglePlainViewButton');
         const openSettingsButton = document.getElementById('openSettingsButton');
         const toggleBackgroundButton = document.getElementById('toggleBackgroundButton');
 
@@ -1226,6 +1615,7 @@
 
         if (sheetSelector) sheetSelector.classList.toggle('hidden', isEditMode);
         if (toggleExpandButton) toggleExpandButton.classList.toggle('hidden', isEditMode);
+        if (togglePlainViewButton) togglePlainViewButton.classList.toggle('hidden', isEditMode);
         if (openSettingsButton) openSettingsButton.classList.toggle('hidden', isEditMode);
         if (toggleBackgroundButton) toggleBackgroundButton.classList.toggle('hidden', isEditMode);
 
@@ -1491,6 +1881,27 @@
             });
         }
 
+        // Plain View toggle
+        const togglePlainViewButton = document.getElementById('togglePlainViewButton');
+        if (togglePlainViewButton) {
+            togglePlainViewButton.addEventListener('click', () => {
+                if (isEditMode) return;
+                isPlainView = !isPlainView;
+                document.body.classList.toggle('plain-view', isPlainView);
+                
+                const plainViewText = document.getElementById('plainViewButtonText');
+                if (plainViewText) {
+                    plainViewText.textContent = isPlainView ? 'Styled' : 'Plain';
+                }
+                
+                // Re-render to apply/remove styling
+                rowCache.clear();
+                currentVisibleStart = 0;
+                currentVisibleEnd = 0;
+                renderWorksheet(currentWorksheet);
+            });
+        }
+
         wireSettingsUI();
     }
 
@@ -1499,7 +1910,7 @@
         if (!selector) return;
 
         selector.innerHTML = '';
-        worksheetsData.forEach((ws, i) => {
+        worksheetsMeta.forEach((ws, i) => {
             const opt = document.createElement('option');
             opt.value = String(i);
             opt.textContent = ws.name;
@@ -1540,8 +1951,55 @@
             return;
         }
 
+        // Handle rowsData response for virtual scrolling
+        if (message.command === 'rowsData') {
+            if (message.requestId && pendingRequests.has(message.requestId)) {
+                const { resolve } = pendingRequests.get(message.requestId);
+                pendingRequests.delete(message.requestId);
+                resolve(message.rows || []);
+            }
+            return;
+        }
+
+        // Handle initVirtualTable for virtual scrolling
+        if (message.command === 'initVirtualTable') {
+            worksheetsMeta = Array.isArray(message.worksheets) ? message.worksheets : [];
+            currentWorksheet = 0;
+
+            const rowHeaderWidth = typeof message.rowHeaderWidth === 'number' ? message.rowHeaderWidth : 60;
+            document.documentElement.style.setProperty('--row-header-width', rowHeaderWidth + 'px');
+
+            populateSheetSelector();
+            attachHandlersOnce();
+            const expandBtn = document.getElementById('toggleExpandButton');
+            if (expandBtn) expandBtn.setAttribute('data-state', 'default');
+            setExpandedMode(false);
+            renderWorksheet(0);
+            return;
+        }
+
+        // Legacy init handler (for backwards compatibility)
         if (message.command === 'init') {
-            worksheetsData = Array.isArray(message.worksheets) ? message.worksheets : [];
+            // Convert old format to new format
+            const worksheets = Array.isArray(message.worksheets) ? message.worksheets : [];
+            worksheetsMeta = worksheets.map((ws, index) => ({
+                name: ws.name,
+                index,
+                totalRows: ws.data ? ws.data.maxRow : 0,
+                columnCount: ws.data ? ws.data.maxCol : 0,
+                columnWidths: ws.data ? ws.data.columnWidths : [],
+                mergedCells: ws.data ? ws.data.mergedCells : []
+            }));
+            // Also cache all rows since they were sent
+            worksheets.forEach((ws, wsIndex) => {
+                if (ws.data && ws.data.rows) {
+                    ws.data.rows.forEach((row, rowIndex) => {
+                        if (wsIndex === 0) {
+                            rowCache.set(rowIndex, row);
+                        }
+                    });
+                }
+            });
             currentWorksheet = 0;
 
             const rowHeaderWidth = typeof message.rowHeaderWidth === 'number' ? message.rowHeaderWidth : 60;

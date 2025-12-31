@@ -17,7 +17,8 @@ XLSX, CSV & TSV Editor is a powerful **Visual Studio Code** extension that allow
 ✅ **Toggle Background Mode** - Easily switch between Light, Dark, and **VS Code** (mirrors editor theme) backgrounds\
 ✅ **Persistent Theme** - Remembers your last used theme across files and sessions\
 ✅ **Interactive Table View** - Display spreadsheet data in a structured HTML table\
-✅ **Color Detection & Conversion** - Converts ARGB Excel colors into CSS-compatible formats
+✅ **Color Detection & Conversion** - Converts ARGB Excel colors into CSS-compatible formats\
+✅ **Plain View Mode** - Strip all Excel styling to view data like CSV/TSV for cleaner inspection
 
 ### XLSX Editing
 ✅ **In-Table Editing** - Edit XLSX sheets directly in the webview table with **Edit**, **Save**, and **Cancel** actions.

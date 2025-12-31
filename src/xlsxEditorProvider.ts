@@ -29,7 +29,8 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         webview.html = this.getWebviewContent(webviewPanel);
 
         let isWebviewReady = false;
-        let worksheetsPayload: any[] | null = null;
+        // Store parsed worksheet data for virtualization
+        let worksheetsData: any[] = [];
         let rowHeaderWidth = 60;
 
         const getPersistedSettings = () => {
@@ -62,11 +63,22 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         webviewPanel.onDidDispose(() => themeChangeDisposable.dispose());
 
         const trySendInit = () => {
-            if (!isWebviewReady || !worksheetsPayload) return;
+            if (!isWebviewReady || !worksheetsData.length) return;
             try {
+                // Send metadata for virtual scrolling instead of full data
+                // Include row heights for stable scroll calculations
+                const worksheetsMeta = worksheetsData.map((ws, index) => ({
+                    name: ws.name,
+                    index,
+                    totalRows: ws.data.maxRow,
+                    columnCount: ws.data.maxCol,
+                    columnWidths: ws.data.columnWidths,
+                    mergedCells: ws.data.mergedCells,
+                    rowHeights: ws.data.rows.map((row: any) => row.height || 28)
+                }));
                 webview.postMessage({
-                    command: 'init',
-                    worksheets: worksheetsPayload,
+                    command: 'initVirtualTable',
+                    worksheets: worksheetsMeta,
                     rowHeaderWidth
                 });
             } catch {
@@ -78,7 +90,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
             const workbook = new Excel.Workbook();
             await workbook.xlsx.readFile(document.uri.fsPath);
 
-            const worksheets = workbook.worksheets.map((worksheet, index) => {
+            worksheetsData = workbook.worksheets.map((worksheet, index) => {
                 const data = this.extractWorksheetData(worksheet);
                 return {
                     name: worksheet.name,
@@ -87,9 +99,8 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 };
             });
 
-            const maxRows = worksheets.length ? Math.max(...worksheets.map(ws => ws.data.maxRow)) : 0;
+            const maxRows = worksheetsData.length ? Math.max(...worksheetsData.map(ws => ws.data.maxRow)) : 0;
             rowHeaderWidth = Math.max(60, Math.ceil(Math.log10(maxRows + 1)) * 12 + 20);
-            worksheetsPayload = worksheets;
         };
 
         // Listen for messages
@@ -116,6 +127,36 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 } catch (err) {
                     console.error('Failed to persist XLSX settings:', err);
                 }
+                return;
+            }
+
+            // Handle getRows request for virtual scrolling
+            if (message?.command === 'getRows') {
+                const { start, end, requestId, sheetIndex } = message;
+                const wsIndex = typeof sheetIndex === 'number' ? sheetIndex : 0;
+                const ws = worksheetsData[wsIndex];
+                if (!ws) {
+                    webview.postMessage({
+                        command: 'rowsData',
+                        rows: [],
+                        start,
+                        end,
+                        requestId
+                    });
+                    return;
+                }
+
+                const clampedStart = Math.max(0, start);
+                const clampedEnd = Math.min(ws.data.rows.length, end);
+                const rows = ws.data.rows.slice(clampedStart, clampedEnd);
+
+                webview.postMessage({
+                    command: 'rowsData',
+                    rows,
+                    start: clampedStart,
+                    end: clampedEnd,
+                    requestId
+                });
                 return;
             }
 
@@ -428,7 +469,10 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     // True when the cell had an explicit white (or near-white) background
                     hasWhiteBackground: cellStyle._hasWhiteBackground || false,
                     hasBlackBorder: cellStyle._hasBlackBorder || false,
+                    hasWhiteBorder: cellStyle._hasWhiteBorder || false,
                     hasBlackBackground: cellStyle._hasBlackBackground || false,
+                    // True when cell has no explicit border (should use theme default)
+                    hasDefaultBorder: cellStyle._hasDefaultBorder || false,
                     originalColor: cellStyle.color || 'rgb(0, 0, 0)',
                     isEmpty: !cell || (cell.value === null && !cellStyle.backgroundColor),
                     // Merged cell info
@@ -645,6 +689,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
         }
 
         // Borders
+        let hasWhiteBorder = false;
         if (cell.border) {
             style.border = {};
             ['top', 'right', 'bottom', 'left'].forEach(side => {
@@ -658,6 +703,12 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     const isBlack = isShadeOfBlack(originalColor);
                     if (isBlack) {
                         hasBlackBorder = true;
+                    }
+                    
+                    // Check for white borders
+                    const isWhite = isShadeOfWhite(originalColor);
+                    if (isWhite) {
+                        hasWhiteBorder = true;
                     }
 
                     let width = '1px';
@@ -677,11 +728,18 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
             });
         }
 
+        // Track if cell has no explicit border (should use theme default)
+        const hasExplicitBorder = cell.border && (
+            cell.border.top || cell.border.right || cell.border.bottom || cell.border.left
+        );
+
         // Add tracking properties for dark mode handling
         style._isDefaultColor = isDefaultColor;
         style._hasBlackBorder = hasBlackBorder;
+        style._hasWhiteBorder = hasWhiteBorder;
         style._hasBlackBackground = hasBlackBackground;
         style._hasWhiteBackground = hasWhiteBackground;
+        style._hasDefaultBorder = !hasExplicitBorder;
 
         return style;
     }
@@ -748,6 +806,15 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/>
             </svg>
             <span id="expandButtonText">Expand</span>
+        </button>
+
+        <button id="togglePlainViewButton" class="toggle-button" title="Toggle Plain View (removes all styling)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <line x1="3" y1="9" x2="21" y2="9"/>
+                <line x1="9" y1="21" x2="9" y2="9"/>
+            </svg>
+            <span id="plainViewButtonText">Plain</span>
         </button>
 
         <button id="openSettingsButton" class="toggle-button icon-only" title="XLSX Settings">

@@ -693,49 +693,65 @@ td[style*="border"] {
 }
 
 /* Dark mode cell overrides */
+/* Only override cells that have default (no explicit) styling */
 body.dark-mode td[data-default-bg="true"] {
     background-color: var(--bg-color) !important;
-} 
+}
 
+body.dark-mode td[data-default-color="true"] {
+    color: var(--text-color) !important;
+}
+
+/* Cells with no explicit border should use theme border */
+body.dark-mode td[data-default-border="true"] {
+    border-color: var(--border-color) !important;
+}
+
+/* Cells with explicit white background - invert to dark */
 body.dark-mode td[data-white-bg="true"] {
     background-color: var(--inverted-bg) !important;
     color: var(--inverted-text) !important;
-    border-top-color: var(--border-color) !important;
-    border-right-color: var(--border-color) !important;
-    border-bottom-color: var(--border-color) !important;
-    border-left-color: var(--border-color) !important;
-} 
+}
 
-body.dark-mode td[data-default-color="true"][data-default-bg="true"] {
-    color: var(--text-color) !important;
-} 
+/* White borders in dark mode should use theme default border */
+body.dark-mode td[data-white-border="true"] {
+    border-color: var(--border-color) !important;
+}
 
+/* Only invert black borders in dark mode */
 body.dark-mode td[data-black-border="true"] {
-    border-top-color: var(--inverted-border) !important;
-    border-right-color: var(--inverted-border) !important;
-    border-bottom-color: var(--inverted-border) !important;
-    border-left-color: var(--inverted-border) !important;
-} 
+    border-color: var(--inverted-border) !important;
+}
 
-/* VS Code theme — treat white-background cells like normal cells so they adapt theme */
+/* VS Code theme cell overrides */
+/* Only override cells that have default (no explicit) styling */
+body.vscode-theme td[data-default-bg="true"] {
+    background-color: var(--bg-color) !important;
+}
+
+body.vscode-theme td[data-default-color="true"] {
+    color: var(--text-color) !important;
+}
+
+/* Cells with no explicit border should use theme border */
+body.vscode-theme td[data-default-border="true"] {
+    border-color: var(--border-color) !important;
+}
+
+/* In vscode theme, white backgrounds adapt to theme */
 body.vscode-theme td[data-white-bg="true"] {
     background-color: var(--bg-color) !important;
     color: var(--text-color) !important;
-    border-top-color: var(--border-color) !important;
-    border-right-color: var(--border-color) !important;
-    border-bottom-color: var(--border-color) !important;
-    border-left-color: var(--border-color) !important;
 }
 
-body.vscode-theme td[data-default-color="true"][data-default-bg="true"] {
-    color: var(--text-color) !important;
+/* White borders in vscode mode should use theme default border */
+body.vscode-theme td[data-white-border="true"] {
+    border-color: var(--border-color) !important;
 }
 
+/* Black borders adapt to theme border color in vscode mode */
 body.vscode-theme td[data-black-border="true"] {
-    border-top-color: var(--inverted-border) !important;
-    border-right-color: var(--inverted-border) !important;
-    border-bottom-color: var(--inverted-border) !important;
-    border-left-color: var(--inverted-border) !important;
+    border-color: var(--border-color) !important;
 }
 
 
@@ -1067,4 +1083,50 @@ body.sticky-header-enabled tbody tr.header-row th.row-header {
     z-index: 1002;
     pointer-events: none;
     display: none;
+}
+
+/* =========================
+   PLAIN VIEW MODE
+   Removes all XLSX styling to display like CSV/TSV
+   ========================= */
+body.plain-view td {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--border-color) !important;
+    font-weight: normal !important;
+    font-style: normal !important;
+    text-decoration: none !important;
+    font-size: 13px !important;
+    font-family: var(--font-family) !important;
+    text-align: left !important;
+    vertical-align: top !important;
+}
+
+body.plain-view td.merged-cell {
+    /* In plain view, merged cells display as regular cells - no special styling needed */
+    display: table-cell;
+}
+
+body.plain-view td[data-hyperlink] {
+    color: var(--link-color) !important;
+    text-decoration: underline !important;
+}
+
+/* Selection still works in plain view */
+body.plain-view td.selected {
+    box-shadow: inset 0 0 0 1000px var(--selection-bg) !important;
+    outline: 1px solid var(--selection-border) !important;
+}
+
+body.plain-view td.active-cell {
+    outline: 2px solid var(--selection-border) !important;
+}
+
+body.plain-view td:hover {
+    box-shadow: inset 0 0 0 1000px var(--row-hover-bg) !important;
+}
+
+body.plain-view td.column-selected,
+body.plain-view td.row-selected {
+    box-shadow: inset 0 0 0 1000px var(--selection-bg) !important;
 }

@@ -1,0 +1,840 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+body.sticky-toolbar-enabled {
+    padding-top: var(--header-height);
+}
+
+body.edit-mode #content {
+    outline: 2px solid var(--accent-color);
+    outline-offset: -2px;
+}
+
+/* ===== Buttons ===== */
+.toggle-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.toggle-button svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* ===== Hover Tooltip (fixed positioned - matches tableWebview.css style) ===== */
+.hover-tooltip {
+    position: fixed;
+    width: 300px;
+    max-width: calc(100vw - 32px);
+    background: var(--tooltip-bg);
+    color: var(--tooltip-text);
+    text-align: left;
+    border-radius: 8px;
+    padding: 8px 10px;
+    z-index: 20000;
+    white-space: normal;
+    line-height: 1.5;
+    box-shadow: var(--tooltip-shadow);
+    border: 1px solid var(--border-color);
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.hover-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.hover-tooltip:not(.hidden) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.hover-tooltip.hidden {
+    display: none !important;
+}
+
+.hover-tooltip .warning {
+    color: var(--error-color);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.hover-tooltip .instruction {
+    color: var(--info-color);
+    font-weight: normal;
+    display: block;
+    margin-top: 6px;
+}
+
+.hover-tooltip img {
+    vertical-align: middle;
+}
+
+#hoverPicTrigger {
+    flex-shrink: 0;
+}
+
+/* ===== Settings Panel (fixed positioned) ===== */
+.settings-panel.floating {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    z-index: 200001;
+}
+
+.settings-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.setting-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-color);
+    user-select: none;
+    cursor: pointer;
+}
+
+input[type="checkbox"]:hover {
+    cursor: pointer;
+}
+
+/* Disabled checkbox state */
+.setting-item input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background-color: transparent;
+    border-color: var(--border-color);
+    box-shadow: none;
+}
+
+.setting-item input[type="checkbox"]:disabled::after {
+    content: none !important;
+}
+
+.setting-item input[type="checkbox"]:disabled+span {
+    opacity: 0.65;
+    cursor: not-allowed;
+    color: var(--text-color);
+}
+
+/* ===== Content ===== */
+#content {
+    height: calc(100vh - var(--header-height));
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+body:not(.sticky-toolbar-enabled) #content {
+    height: calc(100vh - var(--header-height));
+}
+
+/* ===== Loading Indicator ===== */
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* ===== Markdown Container ===== */
+.markdown-container {
+    height: 100%;
+    display: flex;
+    overflow: hidden;
+}
+
+.markdown-container.word-wrap .markdown-preview,
+.markdown-container.word-wrap .markdown-editor {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* ===== Split View (Edit Mode) ===== */
+.markdown-container.split-view {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+}
+
+/* Preview on left side option */
+.markdown-container.split-view.preview-left {
+    grid-template-columns: 1fr 1fr;
+}
+
+.markdown-container.split-view.preview-left .editor-wrapper {
+    order: 2;
+    border-right: none;
+    border-left: 1px solid var(--border-color);
+}
+
+.markdown-container.split-view.preview-left .markdown-preview {
+    order: 1;
+    border-left: none;
+    border-right: none;
+}
+
+.markdown-container.split-view .editor-wrapper {
+    display: flex;
+    border-right: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.markdown-container.split-view .markdown-preview {
+    overflow-y: auto;
+    border-left: none;
+}
+
+/* ===== Editor Wrapper ===== */
+.editor-wrapper {
+    display: none;
+    position: relative;
+    background: var(--bg-color);
+}
+
+.markdown-container.split-view .editor-wrapper {
+    display: flex;
+}
+
+/* ===== Markdown Editor ===== */
+.markdown-editor {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 16px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    tab-size: 4;
+}
+
+.markdown-editor.hidden {
+    display: none;
+}
+
+/* ===== Markdown Preview ===== */
+.markdown-preview {
+    flex: 1;
+    padding: 32px;
+    overflow-y: auto;
+    max-width: 100%;
+}
+
+.markdown-preview.hidden {
+    display: none;
+}
+
+/* GitHub-style Markdown */
+.markdown-preview h1 {
+    font-size: 2em;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--border-color);
+    line-height: 1.25;
+}
+
+.markdown-preview h2 {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin: 24px 0 16px 0;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--border-color);
+    line-height: 1.25;
+}
+
+.markdown-preview h3 {
+    font-size: 1.25em;
+    font-weight: 600;
+    margin: 24px 0 16px 0;
+    line-height: 1.25;
+}
+
+.markdown-preview h4 { font-size: 1em; font-weight: 600; margin: 24px 0 16px 0; }
+.markdown-preview h5 { font-size: 0.875em; font-weight: 600; margin: 24px 0 16px 0; }
+.markdown-preview h6 { font-size: 0.85em; font-weight: 600; margin: 24px 0 16px 0; color: var(--text-muted); }
+
+.markdown-preview p {
+    margin: 0 0 16px 0;
+}
+
+.markdown-preview a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+.markdown-preview a:hover {
+    text-decoration: underline;
+}
+
+/* Inline code */
+.markdown-preview .inline-code {
+    font-family: var(--font-mono);
+    font-size: 85%;
+    background: var(--code-bg);
+    padding: 0.2em 0.4em;
+    border-radius: 6px;
+    color: var(--code-text);
+}
+
+/* Keyboard shortcuts */
+.markdown-preview kbd {
+    display: inline-block;
+    padding: 3px 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1;
+    color: var(--text-color);
+    vertical-align: middle;
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    box-shadow: inset 0 -1px 0 var(--border-color);
+}
+
+/* Code blocks */
+.markdown-preview .code-block {
+    position: relative;
+    margin: 16px 0;
+}
+
+.markdown-preview .code-lang {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    background: var(--pre-bg);
+    border-bottom-left-radius: 6px;
+    border: 1px solid var(--pre-border);
+    border-top: none;
+    border-right: none;
+}
+
+.markdown-preview pre {
+    background: var(--pre-bg);
+    border: 1px solid var(--pre-border);
+    border-radius: 6px;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 85%;
+    line-height: 1.45;
+    margin: 0;
+}
+
+.markdown-preview pre code {
+    font-family: var(--font-mono);
+    background: none;
+    padding: 0;
+    border: none;
+    font-size: inherit;
+    color: inherit;
+}
+
+/* Lists */
+.markdown-preview ul,
+.markdown-preview ol {
+    margin: 0 0 16px 0;
+    padding-left: 2em;
+}
+
+.markdown-preview li {
+    margin: 4px 0;
+}
+
+.markdown-preview li + li {
+    margin-top: 4px;
+}
+
+/* Task lists */
+.markdown-preview .task-item {
+    list-style: none;
+    margin-left: -1.5em;
+}
+
+.markdown-preview .task-item input[type="checkbox"] {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+/* Blockquotes */
+.markdown-preview blockquote {
+    margin: 16px 0;
+    padding: 0 1em;
+    border-left: 4px solid var(--border-color);
+    color: var(--text-muted);
+    background: transparent;
+}
+
+.markdown-preview blockquote > :first-child {
+    margin-top: 0;
+}
+
+.markdown-preview blockquote > :last-child {
+    margin-bottom: 0;
+}
+
+/* Custom Containers */
+.markdown-preview .warning,
+.markdown-preview .info,
+.markdown-preview .error,
+.markdown-preview .success {
+    padding: 16px;
+    margin: 16px 0;
+    border-left: 4px solid;
+    border-radius: 4px;
+}
+
+.markdown-preview .warning {
+    background-color: var(--warning-bg);
+    border-color: var(--warning-color);
+}
+
+.markdown-preview .info {
+    background-color: var(--info-bg);
+    border-color: var(--info-color);
+}
+
+.markdown-preview .error {
+    background-color: var(--error-bg);
+    border-color: var(--error-color);
+}
+
+.markdown-preview .success {
+    background-color: var(--success-bg);
+    border-color: var(--success-color);
+}
+
+/* Horizontal Rule */
+.markdown-preview hr {
+    border: none;
+    height: 4px;
+    background: var(--border-color);
+    margin: 24px 0;
+    border-radius: 2px;
+}
+
+/* Tables */
+.markdown-preview table.md-table {
+    width: max-content;
+    max-width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+    overflow: auto;
+    display: block;
+}
+
+.markdown-preview table.md-table th,
+.markdown-preview table.md-table td {
+    padding: 6px 13px;
+    border: 1px solid var(--border-color);
+}
+
+.markdown-preview table.md-table th {
+    background: var(--header-bg);
+    font-weight: 600;
+}
+
+.markdown-preview table.md-table tr:nth-child(2n) {
+    background: var(--header-bg);
+}
+
+/* Images */
+.markdown-preview .md-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    margin: 16px 0;
+}
+
+/* Emphasis */
+.markdown-preview strong { font-weight: 600; }
+.markdown-preview em { font-style: italic; }
+.markdown-preview del { text-decoration: line-through; }
+.markdown-preview mark { background: var(--warning-bg); padding: 0.1em 0.2em; border-radius: 3px; }
+
+/* ===== Status Info ===== */
+.status-info {
+    position: fixed;
+    bottom: 12px;
+    right: 16px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    z-index: 100;
+}
+
+/* ===== Toast Notification (matches CSV) ===== */
+.toast-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background-color: var(--overlay-bg);
+    color: var(--text-color);
+    padding: 12px 24px;
+    border-radius: 100px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    pointer-events: none;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+}
+
+.toast-notification.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.toast-icon-wrapper {
+    width: 24px;
+    height: 24px;
+    background-color: var(--success-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.toast-icon-wrapper svg {
+    width: 16px;
+    height: 16px;
+    stroke: var(--contrast-text);
+}
+
+.toast-text {
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+
+
+/* Hide elements when in edit mode */
+body.edit-mode .edit-mode-hide {
+    display: none !important;
+}
+
+/* ===== Theme Tooltip (matches tableWebview.css) ===== */
+.theme-tooltip {
+    position: fixed;
+    background: var(--tooltip-bg);
+    color: var(--tooltip-text);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--tooltip-shadow);
+    padding: 8px 10px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.12s ease, transform 0.12s ease;
+    pointer-events: none;
+    z-index: 20000;
+    cursor: pointer;
+}
+
+.theme-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.theme-tooltip:focus {
+    outline: 2px solid var(--focus-ring);
+}
+
+.theme-tooltip .theme-tooltip-text {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.theme-tooltip .theme-tooltip-text strong {
+    font-weight: 700;
+}
+
+/* --------------------------------------------------------- */
+/*                  Toolbar Styling                          */
+/* --------------------------------------------------------- */
+
+:root {
+    --header-height: 40px;
+}
+
+.toolbar {
+    min-height: 40px;
+    height: auto;
+    margin-top: 0;
+    margin-bottom: 0;
+    gap: 12px;
+    top: auto;
+    left: auto;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: visible;
+    white-space: nowrap;
+    padding: 4px 12px;
+    align-items: center;
+    display: flex;
+    background-color: var(--bg-color);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 10000;
+}
+
+.toolbar.not-sticky {
+    position: relative;
+}
+
+.toolbar.settings-open {
+    flex-wrap: nowrap;
+    align-items: center;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.toolbar.expanded-toolbar {
+    padding: 12px 18px;
+    gap: 16px;
+    overflow-x: auto;
+    white-space: nowrap;
+    align-items: center;
+}
+
+.toolbar.expanded-toolbar .settings-panel {
+    width: 100%;
+    position: sticky;
+}
+
+body.sticky-toolbar-enabled .toolbar {
+    padding: 4px 12px;
+    position: fixed;
+    top: 0;
+    z-index: 10000;
+}
+
+body.sticky-toolbar-enabled .toolbar.expanded-toolbar {
+    padding: 4px 18px;
+    gap: 12px;
+}
+
+body:not(.sticky-toolbar-enabled) .toolbar.expanded-toolbar {
+    position: relative;
+}
+
+body:not(.sticky-toolbar-enabled) .toolbar {
+    position: relative;
+    width: 100%;
+}
+
+.toolbar img {
+    flex-shrink: 0;
+    max-width: none !important;
+    width: 120px;
+    height: auto;
+    display: inline-block;
+}
+
+.toolbar svg {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+}
+
+/* --------------------------------------------------------- */
+/*                  Custom Scrollbar Styling                 */
+/*  - Scoped to the scroll containers used by the MD view    */
+/*  - Adds Firefox-compatible rules and uses theme variables */
+/* --------------------------------------------------------- */
+
+.markdown-preview,
+.markdown-editor,
+.toolbar {
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* WebKit-based browsers (Chrome, Edge, Safari) */
+.markdown-preview::-webkit-scrollbar,
+.markdown-editor::-webkit-scrollbar,
+.toolbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.markdown-preview::-webkit-scrollbar-track,
+.markdown-editor::-webkit-scrollbar-track,
+.toolbar::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+.markdown-preview::-webkit-scrollbar-thumb,
+.markdown-editor::-webkit-scrollbar-thumb,
+.toolbar::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 10px;
+}
+
+/* Slightly smaller radius for toolbar horizontal thumb */
+.toolbar::-webkit-scrollbar-thumb {
+    border-radius: 6px;
+}
+
+.markdown-preview::-webkit-scrollbar-thumb:hover,
+.markdown-editor::-webkit-scrollbar-thumb:hover,
+.toolbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+}
+
+.markdown-preview::-webkit-scrollbar-button,
+.markdown-editor::-webkit-scrollbar-button,
+.toolbar::-webkit-scrollbar-button,
+.markdown-preview::-webkit-scrollbar-corner,
+.markdown-editor::-webkit-scrollbar-corner,
+.toolbar::-webkit-scrollbar-corner {
+    display: none;
+    background: transparent;
+}
+
+/* ===== Selection ===== */
+::selection {
+    background: var(--selection-bg);
+}
+
+/* ===== Markdown Extensions ===== */
+
+/* Definition Lists */
+.markdown-preview dl {
+    margin: 16px 0;
+}
+
+.markdown-preview dt {
+    font-weight: 600;
+    margin-top: 12px;
+}
+
+.markdown-preview dd {
+    margin-left: 2em;
+    margin-bottom: 12px;
+}
+
+/* Footnotes */
+.markdown-preview .footnotes {
+    margin-top: 32px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 16px;
+    font-size: 0.9em;
+    color: var(--text-muted);
+}
+
+.markdown-preview .footnotes-list {
+    padding-left: 2em;
+}
+
+.markdown-preview .footnote-item {
+    margin-bottom: 8px;
+}
+
+.markdown-preview .footnote-ref {
+    text-decoration: none;
+    margin-left: 2px;
+    color: var(--accent-color);
+}
+
+.markdown-preview .footnote-backref {
+    text-decoration: none;
+    margin-left: 4px;
+    color: var(--accent-color);
+}
+
+/* Subscript / Superscript */
+.markdown-preview sub {
+    bottom: -0.25em;
+}
+
+.markdown-preview sup {
+    top: -0.5em;
+}
+
+/* Inserted Text */
+.markdown-preview ins {
+    text-decoration: none;
+    background-color: var(--success-bg);
+    border-bottom: 1px solid var(--success-color);
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+/* Marked Text */
+.markdown-preview mark {
+    background-color: var(--warning-bg);
+    color: inherit;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+/* Abbreviations */
+.markdown-preview abbr {
+    text-decoration: underline dotted;
+    cursor: help;
+}

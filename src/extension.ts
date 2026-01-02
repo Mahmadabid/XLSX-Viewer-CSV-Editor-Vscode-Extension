@@ -2,11 +2,13 @@ import * as vscode from 'vscode';
 import { XLSXEditorProvider } from './xlsxEditorProvider';
 import { CSVEditorProvider } from './csvEditorProvider';
 import { TSVEditorProvider } from './tsvEditorProvider';
+import { MDEditorProvider } from './mdEditorProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     const xlsxProvider = new XLSXEditorProvider(context);
     const csvProvider = new CSVEditorProvider(context);
     const tsvProvider = new TSVEditorProvider(context);
+    const mdProvider = new MDEditorProvider(context);
 
     context.subscriptions.push(
         vscode.window.registerCustomEditorProvider('xlsxViewer.xlsx', xlsxProvider, {
@@ -22,6 +24,12 @@ export function activate(context: vscode.ExtensionContext) {
             supportsMultipleEditorsPerDocument: false
         }),
         vscode.window.registerCustomEditorProvider('xlsxViewer.tsv', tsvProvider, {
+            webviewOptions: {
+                retainContextWhenHidden: true
+            },
+            supportsMultipleEditorsPerDocument: false
+        }),
+        vscode.window.registerCustomEditorProvider('xlsxViewer.md', mdProvider, {
             webviewOptions: {
                 retainContextWhenHidden: true
             },
@@ -42,6 +50,23 @@ export function activate(context: vscode.ExtensionContext) {
             } else if (path.endsWith('.tsv')) {
                 await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
                 await vscode.commands.executeCommand('vscode.openWith', uri, 'xlsxViewer.tsv');
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('xlsx-viewer.goBackToMdPreview', async (uri?: vscode.Uri) => {
+            if (uri instanceof vscode.Uri) {
+                await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+                await vscode.commands.executeCommand('vscode.openWith', uri, 'xlsxViewer.md');
+                return;
+            }
+
+            const activeEditor = vscode.window.activeTextEditor;
+            if (activeEditor) {
+                const docUri = activeEditor.document.uri;
+                await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+                await vscode.commands.executeCommand('vscode.openWith', docUri, 'xlsxViewer.md');
             }
         })
     );

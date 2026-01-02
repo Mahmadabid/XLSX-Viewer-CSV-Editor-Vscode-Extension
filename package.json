@@ -1,15 +1,15 @@
 {
   "name": "xlsx-viewer",
-  "displayName": "XLSX, CSV & TSV Editor",
-  "description": "View and edit XLSX files with colors, fonts and styles from Excel files (supporting in-table editing), and view and edit CSV  & TSV files in VS Code. This is an open-source project.",
-  "version": "1.6.4",
+  "displayName": "XLSX, CSV, TSV & Markdown Editor",
+  "description": "View and edit XLSX files with colors, fonts and styles from Excel files (supporting in-table editing), and view and edit CSV, TSV & Markdown files in VS Code. This is an open-source project.",
+  "version": "1.6.5",
   "publisher": "muhammad-ahmad",
   "engines": {
     "vscode": "^1.60.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Mahmadabid/XLSX-CSV-TSV-Editor-Vscode-Extension"
+    "url": "https://github.com/Mahmadabid/XLSX-CSV-TSV-MARKDOWN-Editor-Vscode-Extension"
   },
   "keywords": [
     "xlsx",
@@ -62,9 +62,24 @@
             "filenamePattern": "*.tsv"
           }
         ]
+      },
+      {
+        "viewType": "xlsxViewer.md",
+        "displayName": "Markdown Viewer & Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          }
+        ]
       }
     ],
     "commands": [
+      {
+        "command": "xlsx-viewer.goBackToMdPreview",
+        "title": "Open in Preview",
+        "category": "Markdown",
+        "icon": "resources/md/logo.svg"
+      },
       {
         "command": "xlsx-viewer.goBackToTableView",
         "title": "Open in Table View",
@@ -82,6 +97,11 @@
         {
           "when": "resourceExtname == '.tsv' && activeEditor != 'xlsxViewer.tsv'",
           "command": "xlsx-viewer.goBackToTableView",
+          "group": "navigation"
+        },
+        {
+          "when": "resourceExtname == '.md' && activeEditor != 'xlsxViewer.md'",
+          "command": "xlsx-viewer.goBackToMdPreview",
           "group": "navigation"
         }
       ]
@@ -138,6 +158,30 @@
           "type": "boolean",
           "default": true,
           "description": "Show a hover tooltip for hyperlinks with Open/Copy actions."
+        },
+        "xlsxViewer.md.stickyToolbar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Keep the Markdown toolbar sticky at the top of the editor."
+        },
+        "xlsxViewer.md.wordWrap": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable word wrap in the Markdown preview."
+        },
+        "xlsxViewer.md.syncScroll": {
+          "type": "boolean",
+          "default": true,
+          "description": "Synchronize scroll position between editor and preview in split view."
+        },
+        "xlsxViewer.md.previewPosition": {
+          "type": "string",
+          "default": "right",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "description": "Position of the preview pane in split view (left or right)."
         }
       }
     }
@@ -170,8 +214,21 @@
     "vscode-test": "^1.5.2"
   },
   "dependencies": {
-    "@wolf-table/table": "^0.0.3",
-    "exceljs": "^4.3.0"
+    "@types/highlight.js": "^9.12.4",
+    "@types/markdown-it": "^14.1.2",
+    "@types/markdown-it-container": "^2.0.11",
+    "exceljs": "^4.3.0",
+    "highlight.js": "^11.11.1",
+    "markdown-it": "^14.1.0",
+    "markdown-it-abbr": "^2.0.0",
+    "markdown-it-container": "^4.0.0",
+    "markdown-it-deflist": "^3.0.0",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-ins": "^4.0.0",
+    "markdown-it-mark": "^4.0.0",
+    "markdown-it-sub": "^2.0.0",
+    "markdown-it-sup": "^2.0.0",
+    "markdown-it-task-lists": "^2.1.1"
   },
   "license": "MIT",
   "icon": "icon.png"

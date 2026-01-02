@@ -1,12 +1,12 @@
-# XLSX, CSV & TSV Editor - VS Code Extension
+# XLSX, CSV, TSV & Markdown Editor - VS Code Extension
 
-This is an open-source project that allows you to view and edit XLSX files with styles, fonts, and colors from Excel files, supporting multiple sheets. Additionally, it provides a table view and editing capabilities for CSV and TSV files directly in VS Code.
+This is an open-source project that allows you to view and edit XLSX files with styles, fonts, and colors from Excel files, supporting multiple sheets. Additionally, it provides a table view and editing capabilities for CSV, TSV, and Github Flavored Markdown (.md) files directly in VS Code.
 
 ## 📌 Overview
 
-XLSX, CSV & TSV Editor is a powerful **Visual Studio Code** extension that allows users to **open, view, and edit Excel files (.xlsx)**, **CSV**, and **TSV files directly within VS Code**. It provides a seamless, lightweight experience without requiring external software like Microsoft Excel or Google Sheets.
+XLSX, CSV, TSV & Markdown Editor is a powerful **Visual Studio Code** extension that allows users to **open, view, and edit Excel files (.xlsx)**, **CSV**, **TSV**, and **Markdown (.md) files directly within VS Code**. It provides a seamless, lightweight experience without requiring external software like Microsoft Excel or Google Sheets.
 
-**🚨 Important Note**: This extension was previously named **`XLSX Viewer & CSV Editor`**. It has now been renamed to **`XLSX, CSV & TSV Editor`** to reflect the added support for TSV files (in addition to CSV).
+**🚨 Important Note**: This extension was previously named **`XLSX Viewer & CSV Editor`**. It has since been renamed to **`XLSX, CSV, TSV & Markdown Editor`** to reflect added support for TSV and Markdown (.md) files.
 
 ## 🚀 Features
 
@@ -54,13 +54,21 @@ XLSX, CSV & TSV Editor is a powerful **Visual Studio Code** extension that allow
 ✅ **Edit File** - Open the CSV/TSV in VS Code’s default text editor when needed\
 
 **TSV notes:** Copying from the table and pasting into other apps will use tab-delimited data for TSV files; serialization and escaping behave like CSV but use `\t` as the delimiter for TSV.
+
+### Markdown Viewer & Editor
+✅ **Preview & Edit Modes** - Toggle between a rendered Markdown preview and an inline editor with **Edit Preview**, **Save**, and **Cancel**.
+✅ **Toolbar & Settings** - Word Wrap, Line Numbers, Sticky Toolbar and theme toggle available in the editor toolbar.
+✅ **Local Rendering** - Fast, lightweight rendering for common Markdown syntax (headers, lists, code blocks, tables, task lists, images, links). **Uses GitHub-Flavored Markdown (GFM) for rendering (tables, task lists, fenced code blocks, etc.).**
+✅ **Theme Support** - Respects Light / Dark / VS Code theme using the shared `ThemeManager`.
+✅ **Open with Preview** - Open `.md` files with the extension via the editor toolbar or the command palette.
+
 ## 🛠️ Installation
 
 1. Open **VS Code**
 2. Go to the **Extensions Marketplace** (`Ctrl+Shift+X`)
-3. Search for `XLSX, CSV & TSV Editor`
+3. Search for `XLSX, CSV, TSV & Markdown Editor`
 4. Click **Install**
-5. Open any `.xlsx` or `.csv` file to start viewing or editing!
+5. Open any `.xlsx`, `.csv`, `.tsv` or `.md` file to start viewing or editing!
 
 Alternatively, you can install it manually using:
 
@@ -98,6 +106,6 @@ If you find this extension helpful, please **rate it on the VS Code Marketplace*
 ---
 
 📢 **Follow us for updates!**\
-🔗 GitHub: [XLSX, CSV & TSV Editor Github Link](https://github.com/Mahmadabid/XLSX-CSV-TSV-Editor-Vscode-Extension)\
+🔗 GitHub: [XLSX, CSV & TSV Editor Github Link](https://github.com/Mahmadabid/XLSX-CSV-TSV-MARKDOWN-Editor-Vscode-Extension)\
 🔗 Marketplace: [VS Code Extension Link](https://marketplace.visualstudio.com/items?itemName=muhammad-ahmad.xlsx-viewer)\
 🔗 Open VSX: [Open VSX Link](https://open-vsx.org/extension/muhammad-ahmad/xlsx-viewer)

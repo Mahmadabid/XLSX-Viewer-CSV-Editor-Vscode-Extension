@@ -1,64 +1,76 @@
-/* global acquireVsCodeApi */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+
+import { ThemeManager } from '../shared/themeManager';
+import { SettingsManager } from '../shared/settingsManager';
+import { ToolbarManager } from '../shared/toolbarManager';
+import { Utils } from '../shared/utils';
+import { Icons } from '../shared/icons';
+import { vscode, VirtualScrollConfig, debounce } from '../shared/common';
+import { VirtualLoader } from '../shared/virtualLoader';
+import { InfoTooltip } from '../shared/infoTooltip';
 
 (function () {
-    const vscode = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : { postMessage: () => { } };
-
     // ===== Virtual Scrolling Configuration =====
-    const ROW_HEIGHT = 28;
-    const BUFFER_ROWS = 20;
-    const CHUNK_SIZE = 100;
+    const { ROW_HEIGHT, BUFFER_ROWS, CHUNK_SIZE } = VirtualScrollConfig;
 
     // Data injected from the extension via postMessage
-    let worksheetsMeta = [];
+    let worksheetsMeta: any[] = [];
     let currentWorksheet = 0;
 
     // Virtual scrolling state
     let totalRows = 0;
     let columnCount = 0;
-    let columnWidths = [];
-    let mergedCells = [];
-    let allRowHeights = []; // Pre-loaded row heights from extension
+    let columnWidths: number[] = [];
+    let mergedCells: any[] = [];
+    let allRowHeights: number[] = []; // Pre-loaded row heights from extension
     let totalContentHeight = 0; // Pre-calculated total height
-    let rowCache = new Map();
-    let pendingRequests = new Map();
+    let rowCache = new Map<number, any>();
+    const virtualLoader = new VirtualLoader<any[]>('getRows');
     let currentVisibleStart = 0;
     let currentVisibleEnd = 0;
     let isRequestingRows = false;
-    let scrollDebounceTimer = null;
     let isRendering = false; // Prevent re-render during render
 
     // Selection state
-    let selectedCells = new Set();
-    let activeCell = null;
+    const selectedCells = new Set<HTMLElement>();
+    let activeCell: HTMLElement | null = null;
     let isSelecting = false;
-    let selectionStart = null;
-    let selectionEnd = null;
-    let selectedRows = new Set();
-    let selectedColumns = new Set();
-    let lastSelectedRow = null;
-    let lastSelectedColumn = null;
+    let selectionStart: { row: number, col: number } | null = null;
+    let selectionEnd: { row: number, col: number } | null = null;
+    const selectedRows = new Set<number>();
+    const selectedColumns = new Set<number>();
+    let lastSelectedRow: number | null = null;
+    let lastSelectedColumn: number | null = null;
 
     // Track selected row/column indices for full copy (virtualization support)
-    let selectedRowIndices = new Set();
-    let selectedColumnIndices = new Set();
+    const selectedRowIndices = new Set<number>();
+    const selectedColumnIndices = new Set<number>();
 
     // Resize state
     let isResizing = false;
-    let resizeType = null; // 'column' or 'row'
+    let resizeType: 'column' | 'row' | null = null; // 'column' or 'row'
     let resizeIndex = -1;
     let resizeStartPos = 0;
     let resizeStartSize = 0;
 
     // Auto-scroll while dragging selection
-    let autoScrollRequest = null;
-    let lastMousePos = null; // { x, y }
+    let autoScrollRequest: any = null;
+    let lastMousePos: { x: number, y: number } | null = null; // { x, y }
     const AUTO_SCROLL_THRESHOLD = 40; // px
     const AUTO_SCROLL_STEP = 20; // px per frame
 
     let handlersAttached = false;
 
     // Settings (persisted by extension)
-    let currentSettings = {
+    interface Settings {
+        firstRowIsHeader: boolean;
+        stickyToolbar: boolean;
+        stickyHeader: boolean;
+        hyperlinkPreview: boolean;
+    }
+
+    let currentSettings: Settings = {
         firstRowIsHeader: false,
         stickyToolbar: true,
         stickyHeader: false,
@@ -76,23 +88,23 @@
     let isPlainView = false;
 
     // Hyperlink hover tooltip
-    let linkTooltip = null;
-    let linkTooltipHideTimer = null;
+    let linkTooltip: HTMLElement | null = null;
+    let linkTooltipHideTimer: any = null;
 
     // Toast
-    let toastEl = null;
+    let toastEl: HTMLElement | null = null;
 
     // Copy state (CSV-parity: avoid concurrent copies)
     let isCopying = false;
 
-    function setButtonsEnabled(enabled) {
-        const saveBtn = document.getElementById('saveTableEditsButton');
-        const cancelBtn = document.getElementById('cancelTableEditsButton');
+    function setButtonsEnabled(enabled: boolean) {
+        const saveBtn = document.getElementById('saveTableEditsButton') as HTMLButtonElement;
+        const cancelBtn = document.getElementById('cancelTableEditsButton') as HTMLButtonElement;
         if (saveBtn) saveBtn.disabled = !enabled;
         if (cancelBtn) cancelBtn.disabled = !enabled;
     }
 
-    function normalizeCellText(text) {
+    function normalizeCellText(text: string | null | undefined): string {
         if (!text) return '';
         return String(text).replace(/\u00a0/g, '').replace(/\r?\n/g, ' ').trimEnd();
     }
@@ -105,7 +117,7 @@
         });
     }
 
-    async function writeToClipboardAsync(text) {
+    async function writeToClipboardAsync(text: string) {
         if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
             try {
                 await navigator.clipboard.writeText(text);
@@ -115,7 +127,7 @@
             }
         }
 
-        await new Promise((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
             const textarea = document.createElement('textarea');
             textarea.value = text;
             textarea.setAttribute('readonly', '');
@@ -149,7 +161,7 @@
         });
     }
 
-    function getExcelColumnLabel(n) {
+    function getExcelColumnLabel(n: number): string {
         let label = '';
         while (n > 0) {
             const rem = (n - 1) % 26;
@@ -159,7 +171,7 @@
         return label;
     }
 
-    function formatCellStyle(style) {
+    function formatCellStyle(style: any): string {
         let css = '';
 
         if (style.backgroundColor) css += 'background-color: ' + style.backgroundColor + ';';
@@ -188,38 +200,19 @@
 
     // ===== Virtual Scrolling Core =====
 
-    function getTableContainer() {
+    function getTableContainer(): HTMLElement | null {
         return document.querySelector('.table-scroll');
     }
 
-    function requestRows(start, end, timeout = 10000) {
-        return new Promise((resolve) => {
-            const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            pendingRequests.set(requestId, { resolve, start, end });
-
-            vscode.postMessage({
-                command: 'getRows',
-                start,
-                end,
-                requestId,
-                sheetIndex: currentWorksheet
-            });
-
-            setTimeout(() => {
-                if (pendingRequests.has(requestId)) {
-                    console.warn(`Request ${requestId} timed out for rows ${start}-${end}`);
-                    pendingRequests.delete(requestId);
-                    resolve([]);
-                }
-            }, timeout);
-        });
+    function requestRows(start: number, end: number, timeout = 10000): Promise<any[]> {
+        return virtualLoader.requestRows(start, end, timeout, { sheetIndex: currentWorksheet });
     }
 
-    function requestAllRows() {
+    function requestAllRows(): Promise<any[]> {
         return requestRows(0, totalRows, 30000);
     }
 
-    function createRowHtml(rowData, rowIndex) {
+    function createRowHtml(rowData: any, rowIndex: number): string {
         const height = rowData.height || ROW_HEIGHT;
         const isHeaderRow = rowIndex === 0;
 
@@ -231,7 +224,7 @@
 
         let virtualColIndex = 0;
         for (let actualCol = 1; actualCol <= columnCount; actualCol++) {
-            const cellData = rowData.cells ? rowData.cells.find(cell => cell.colNumber === actualCol) : null;
+            const cellData = rowData.cells ? rowData.cells.find((cell: any) => cell.colNumber === actualCol) : null;
 
             if (cellData) {
                 // In plain view mode, skip all styling
@@ -309,7 +302,7 @@
         return html;
     }
 
-    function renderVirtualRows(startIndex, endIndex, rowsData) {
+    function renderVirtualRows(startIndex: number, endIndex: number, rowsData: any[]) {
         if (isRendering) return;
         isRendering = true;
 
@@ -446,7 +439,7 @@
             currentVisibleStart = chunkStart;
             currentVisibleEnd = chunkEnd;
 
-            const cachedRows = [];
+            const cachedRows: any[] = [];
             for (let i = chunkStart; i < chunkEnd; i++) {
                 cachedRows.push(rowCache.get(i) || { cells: [], rowNumber: i + 1 });
             }
@@ -454,14 +447,9 @@
         }
     }
 
-    function onScroll() {
-        if (scrollDebounceTimer) {
-            clearTimeout(scrollDebounceTimer);
-        }
-        scrollDebounceTimer = setTimeout(() => {
-            updateVisibleRows();
-        }, 50); // Increased debounce to reduce fluctuation
-    }
+    const onScroll = debounce(() => {
+        updateVisibleRows();
+    }, 50); // Increased debounce to reduce fluctuation
 
     function initializeVirtualScrolling() {
         const container = getTableContainer();
@@ -478,7 +466,7 @@
         selectedColumnIndices.forEach(colIdx => {
             document.querySelectorAll('td[data-col="' + colIdx + '"], th[data-col="' + colIdx + '"]').forEach((cell) => {
                 cell.classList.add('column-selected');
-                if (cell.tagName === 'TD') selectedCells.add(cell);
+                if (cell.tagName === 'TD') selectedCells.add(cell as HTMLElement);
             });
         });
 
@@ -486,7 +474,7 @@
         selectedRowIndices.forEach(rowIdx => {
             document.querySelectorAll('td[data-row="' + rowIdx + '"], th[data-row="' + rowIdx + '"]').forEach((cell) => {
                 cell.classList.add('row-selected');
-                if (cell.tagName === 'TD') selectedCells.add(cell);
+                if (cell.tagName === 'TD') selectedCells.add(cell as HTMLElement);
             });
         });
 
@@ -495,7 +483,7 @@
             const row = activeCell.dataset?.row;
             const col = activeCell.dataset?.col;
             if (row !== undefined && col !== undefined) {
-                const newCell = document.querySelector('td[data-row="' + row + '"][data-col="' + col + '"]');
+                const newCell = document.querySelector('td[data-row="' + row + '"][data-col="' + col + '"]') as HTMLElement;
                 if (newCell) {
                     newCell.classList.add('active-cell');
                     activeCell = newCell;
@@ -504,7 +492,7 @@
         }
     }
 
-    function createTableShell() {
+    function createTableShell(): string {
         let html = '<div class="table-scroll"><table id="xlsxTable">';
 
         // Header row
@@ -521,32 +509,9 @@
         return html;
     }
 
-    function ensureToast() {
-        if (toastEl) return toastEl;
-        toastEl = document.createElement('div');
-        toastEl.id = 'saveToast';
-        toastEl.className = 'toast-notification';
-        toastEl.innerHTML = `
-            <div class="toast-icon-wrapper">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-            <span class="toast-text"></span>
-        `;
-        document.body.appendChild(toastEl);
-        return toastEl;
-    }
+    const showToast = Utils.showToast;
 
-    function showToast(message) {
-        const toast = ensureToast();
-        const textEl = toast.querySelector('.toast-text');
-        if (textEl) textEl.textContent = String(message || '');
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 2000);
-    }
-
-    function setLoadingText(text) {
+    function setLoadingText(text: string) {
         const el = document.querySelector('.loading-text');
         if (el) el.textContent = text;
     }
@@ -561,7 +526,7 @@
         if (el) el.classList.add('hidden');
     }
 
-    function renderWorksheet(index) {
+    function renderWorksheet(index: number) {
         if (!worksheetsMeta || !worksheetsMeta.length) return;
 
         showLoading();
@@ -570,7 +535,7 @@
         rowCache.clear();
         currentVisibleStart = 0;
         currentVisibleEnd = 0;
-        pendingRequests.clear();
+        virtualLoader.clear();
         isRendering = false;
 
         const wsMeta = worksheetsMeta[index];
@@ -607,14 +572,14 @@
         // Column/row resize handles
         table.addEventListener('mousedown', (e) => {
             if (isEditMode) return;
-            const target = e.target;
+            const target = e.target as HTMLElement;
             if (target && target.classList && target.classList.contains('col-resize-handle')) {
                 e.preventDefault();
                 e.stopPropagation();
 
                 isResizing = true;
                 resizeType = 'column';
-                resizeIndex = parseInt(target.dataset.col, 10);
+                resizeIndex = parseInt(target.dataset.col!, 10);
                 resizeStartPos = e.clientX;
 
                 const header = target.parentElement;
@@ -632,7 +597,7 @@
 
                 isResizing = true;
                 resizeType = 'row';
-                resizeIndex = parseInt(target.dataset.row, 10);
+                resizeIndex = parseInt(target.dataset.row!, 10);
                 resizeStartPos = e.clientY;
 
                 const header = target.parentElement;
@@ -658,8 +623,8 @@
                 const delta = e.clientX - resizeStartPos;
                 const newSize = Math.max(20, resizeStartSize + delta);
 
-                const headers = tableEl.querySelectorAll('th.col-header[data-col="' + resizeIndex + '"]');
-                const cells = tableEl.querySelectorAll('td[data-col="' + resizeIndex + '"]');
+                const headers = tableEl.querySelectorAll('th.col-header[data-col="' + resizeIndex + '"]') as NodeListOf<HTMLElement>;
+                const cells = tableEl.querySelectorAll('td[data-col="' + resizeIndex + '"]') as NodeListOf<HTMLElement>;
 
                 headers.forEach(header => {
                     header.style.width = newSize + 'px';
@@ -682,8 +647,8 @@
                 const delta = e.clientY - resizeStartPos;
                 const newSize = Math.max(15, resizeStartSize + delta);
 
-                const headers = tableEl.querySelectorAll('th.row-header[data-row="' + resizeIndex + '"]');
-                const row = tableEl.querySelectorAll('tr')[resizeIndex + 1]; // +1 for header row
+                const headers = tableEl.querySelectorAll('th.row-header[data-row="' + resizeIndex + '"]') as NodeListOf<HTMLElement>;
+                const row = tableEl.querySelectorAll('tr')[resizeIndex + 1] as HTMLElement; // +1 for header row
 
                 headers.forEach(header => {
                     header.style.height = newSize + 'px';
@@ -691,7 +656,7 @@
 
                 if (row) {
                     row.style.height = newSize + 'px';
-                    const cells = row.querySelectorAll('td');
+                    const cells = row.querySelectorAll('td') as NodeListOf<HTMLElement>;
                     cells.forEach(cell => {
                         if (!cell.getAttribute('rowspan') || cell.getAttribute('rowspan') === '1') {
                             cell.style.height = newSize + 'px';
@@ -721,19 +686,19 @@
         // Double-click to auto-fit
         table.addEventListener('dblclick', (e) => {
             if (isEditMode) return;
-            const target = e.target;
+            const target = e.target as HTMLElement;
             if (target && target.classList && target.classList.contains('col-resize-handle')) {
                 e.preventDefault();
-                autoFitColumn(parseInt(target.dataset.col, 10));
+                autoFitColumn(parseInt(target.dataset.col!, 10));
             } else if (target && target.classList && target.classList.contains('row-resize-handle')) {
                 e.preventDefault();
-                autoFitRow(parseInt(target.dataset.row, 10));
+                autoFitRow(parseInt(target.dataset.row!, 10));
             }
         });
     }
 
-    function autoFitColumn(colIndex) {
-        const cells = document.querySelectorAll('td[data-col="' + colIndex + '"], th[data-col="' + colIndex + '"]');
+    function autoFitColumn(colIndex: number) {
+        const cells = document.querySelectorAll('td[data-col="' + colIndex + '"], th[data-col="' + colIndex + '"]') as NodeListOf<HTMLElement>;
         let maxWidth = 50;
 
         cells.forEach(cell => {
@@ -760,11 +725,11 @@
         });
     }
 
-    function autoFitRow(rowIndex) {
-        const row = document.querySelectorAll('tr')[rowIndex + 1]; // +1 for header row
+    function autoFitRow(rowIndex: number) {
+        const row = document.querySelectorAll('tr')[rowIndex + 1] as HTMLElement; // +1 for header row
         if (!row) return;
 
-        const cells = row.querySelectorAll('td');
+        const cells = row.querySelectorAll('td') as NodeListOf<HTMLElement>;
         let maxHeight = 20;
 
         cells.forEach(cell => {
@@ -775,7 +740,7 @@
         });
 
         row.style.height = maxHeight + 'px';
-        const headers = document.querySelectorAll('th.row-header[data-row="' + rowIndex + '"]');
+        const headers = document.querySelectorAll('th.row-header[data-row="' + rowIndex + '"]') as NodeListOf<HTMLElement>;
         headers.forEach(header => {
             header.style.height = maxHeight + 'px';
         });
@@ -788,11 +753,16 @@
     }
 
     function autoFitAllColumns() {
-        if (!worksheetsData || !worksheetsData.length) return;
-        const data = worksheetsData[currentWorksheet].data;
+        if (!worksheetsMeta || !worksheetsMeta.length) return;
+        // Note: worksheetsData was not defined in original JS, assuming it meant worksheetsMeta or similar
+        // But autoFitAllColumns was not called anywhere in the original JS.
+        // Keeping it but commenting out usage if any.
+        /*
+        const data = worksheetsMeta[currentWorksheet].data;
         for (let c = 0; c < data.maxCol; c++) {
             autoFitColumn(c);
         }
+        */
     }
 
     function clearSelection() {
@@ -811,7 +781,7 @@
         if (info) info.style.display = 'none';
     }
 
-    function selectCell(cell, isMulti = false) {
+    function selectCell(cell: HTMLElement, isMulti = false) {
         if (!isMulti) {
             clearSelection();
         }
@@ -823,7 +793,7 @@
         updateSelectionInfo();
     }
 
-    function selectRange(startRow, startCol, endRow, endCol) {
+    function selectRange(startRow: number, startCol: number, endRow: number, endCol: number) {
         clearSelection();
 
         const minRow = Math.min(startRow, endRow);
@@ -831,10 +801,10 @@
         const minCol = Math.min(startCol, endCol);
         const maxCol = Math.max(startCol, endCol);
 
-        const cells = document.querySelectorAll('td');
+        const cells = document.querySelectorAll('td') as NodeListOf<HTMLElement>;
         cells.forEach(cell => {
-            const row = parseInt(cell.dataset.row, 10);
-            const col = parseInt(cell.dataset.col, 10);
+            const row = parseInt(cell.dataset.row!, 10);
+            const col = parseInt(cell.dataset.col!, 10);
 
             if (row >= minRow && row <= maxRow && col >= minCol && col <= maxCol) {
                 cell.classList.add('selected');
@@ -842,7 +812,7 @@
             }
         });
 
-        const startCell = document.querySelector('td[data-row="' + startRow + '"][data-col="' + startCol + '"]');
+        const startCell = document.querySelector('td[data-row="' + startRow + '"][data-col="' + startCol + '"]') as HTMLElement;
         if (startCell) {
             startCell.classList.add('active-cell');
             activeCell = startCell;
@@ -851,7 +821,7 @@
         updateSelectionInfo();
     }
 
-    function selectRow(rowIndex, ctrlKey, shiftKey) {
+    function selectRow(rowIndex: number, ctrlKey: boolean, shiftKey: boolean) {
         if (!ctrlKey && !shiftKey) {
             clearSelection();
             lastSelectedRow = rowIndex;
@@ -873,7 +843,7 @@
                     cells.forEach(cell => {
                         cell.classList.add('row-selected');
                         if (cell.tagName === 'TD') {
-                            selectedCells.add(cell);
+                            selectedCells.add(cell as HTMLElement);
                         }
                     });
                 }
@@ -885,7 +855,7 @@
                 const cells = document.querySelectorAll('td[data-row="' + rowIndex + '"], th[data-row="' + rowIndex + '"]');
                 cells.forEach(cell => {
                     cell.classList.remove('row-selected');
-                    if (cell.tagName === 'TD') selectedCells.delete(cell);
+                    if (cell.tagName === 'TD') selectedCells.delete(cell as HTMLElement);
                 });
             } else {
                 selectedRows.add(rowIndex);
@@ -894,7 +864,7 @@
                 cells.forEach(cell => {
                     cell.classList.add('row-selected');
                     if (cell.tagName === 'TD') {
-                        selectedCells.add(cell);
+                        selectedCells.add(cell as HTMLElement);
                     }
                 });
             }
@@ -905,7 +875,7 @@
             cells.forEach(cell => {
                 cell.classList.add('row-selected');
                 if (cell.tagName === 'TD') {
-                    selectedCells.add(cell);
+                    selectedCells.add(cell as HTMLElement);
                 }
             });
         }
@@ -913,7 +883,7 @@
         updateSelectionInfo();
     }
 
-    function selectColumn(colIndex, ctrlKey, shiftKey) {
+    function selectColumn(colIndex: number, ctrlKey: boolean, shiftKey: boolean) {
         if (!ctrlKey && !shiftKey) {
             clearSelection();
             lastSelectedColumn = colIndex;
@@ -935,7 +905,7 @@
                     cells.forEach(cell => {
                         cell.classList.add('column-selected');
                         if (cell.tagName === 'TD') {
-                            selectedCells.add(cell);
+                            selectedCells.add(cell as HTMLElement);
                         }
                     });
                 }
@@ -947,7 +917,7 @@
                 const cells = document.querySelectorAll('td[data-col="' + colIndex + '"], th[data-col="' + colIndex + '"]');
                 cells.forEach(cell => {
                     cell.classList.remove('column-selected');
-                    if (cell.tagName === 'TD') selectedCells.delete(cell);
+                    if (cell.tagName === 'TD') selectedCells.delete(cell as HTMLElement);
                 });
             } else {
                 selectedColumns.add(colIndex);
@@ -956,7 +926,7 @@
                 cells.forEach(cell => {
                     cell.classList.add('column-selected');
                     if (cell.tagName === 'TD') {
-                        selectedCells.add(cell);
+                        selectedCells.add(cell as HTMLElement);
                     }
                 });
             }
@@ -967,7 +937,7 @@
             cells.forEach(cell => {
                 cell.classList.add('column-selected');
                 if (cell.tagName === 'TD') {
-                    selectedCells.add(cell);
+                    selectedCells.add(cell as HTMLElement);
                 }
             });
         }
@@ -1024,7 +994,7 @@
             showToast('Copying...');
             await yieldToMain();
 
-            let outputLines = [];
+            let outputLines: string[] = [];
 
             if (hasFullColumnSelection || hasFullRowSelection) {
                 // Need to fetch all rows for complete copy
@@ -1052,7 +1022,7 @@
                     for (let r = 0; r < rowCount; r++) {
                         const rowData = allRows[r] || { cells: [] };
                         const lineParts = sortedCols.map(c => {
-                            const cellData = rowData.cells ? rowData.cells.find(cell => cell.colNumber === c + 1) : null;
+                            const cellData = rowData.cells ? rowData.cells.find((cell: any) => cell.colNumber === c + 1) : null;
                             return cellData ? normalizeCellText(cellData.value || '') : '';
                         });
                         outputLines.push(lineParts.join('\t'));
@@ -1064,9 +1034,9 @@
                     for (const r of sortedRows) {
                         if (r < rowCount) {
                             const rowData = allRows[r] || { cells: [] };
-                            const lineParts = [];
+                            const lineParts: string[] = [];
                             for (let c = 0; c < columnCount; c++) {
-                                const cellData = rowData.cells ? rowData.cells.find(cell => cell.colNumber === c + 1) : null;
+                                const cellData = rowData.cells ? rowData.cells.find((cell: any) => cell.colNumber === c + 1) : null;
                                 lineParts.push(cellData ? normalizeCellText(cellData.value || '') : '');
                             }
                             outputLines.push(lineParts.join('\t'));
@@ -1081,7 +1051,7 @@
                         if (r < rowCount) {
                             const rowData = allRows[r] || { cells: [] };
                             const lineParts = sortedCols.map(c => {
-                                const cellData = rowData.cells ? rowData.cells.find(cell => cell.colNumber === c + 1) : null;
+                                const cellData = rowData.cells ? rowData.cells.find((cell: any) => cell.colNumber === c + 1) : null;
                                 return cellData ? normalizeCellText(cellData.value || '') : '';
                             });
                             outputLines.push(lineParts.join('\t'));
@@ -1103,12 +1073,12 @@
             } else {
                 // Regular cell selection - use DOM/cache
                 const cellsArray = Array.from(selectedCells);
-                const rowSet = new Set();
-                const colSet = new Set();
+                const rowSet = new Set<number>();
+                const colSet = new Set<number>();
 
                 cellsArray.forEach(td => {
-                    const r = parseInt(td.dataset.row, 10);
-                    const c = parseInt(td.dataset.col, 10);
+                    const r = parseInt(td.dataset.row!, 10);
+                    const c = parseInt(td.dataset.col!, 10);
                     if (!isNaN(r) && !isNaN(c)) {
                         rowSet.add(r);
                         colSet.add(c);
@@ -1142,7 +1112,7 @@
         }
     }
 
-    function invertColor(color) {
+    function invertColor(color: string) {
         const match = String(color || '').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
         if (!match) return color;
 
@@ -1166,17 +1136,18 @@
 
         table.addEventListener('mousedown', (e) => {
             if (isEditMode) return;
-            if (e.target && e.target.classList && (e.target.classList.contains('col-resize-handle') || e.target.classList.contains('row-resize-handle'))) {
+            const target = e.target as HTMLElement;
+            if (target && target.classList && (target.classList.contains('col-resize-handle') || target.classList.contains('row-resize-handle'))) {
                 return;
             }
 
-            const target = e.target.closest('td, th');
-            if (!target) return;
+            const cellTarget = target.closest('td, th') as HTMLElement;
+            if (!cellTarget) return;
 
             e.preventDefault();
 
-            if (target.classList.contains('col-header')) {
-                const colIndex = parseInt(target.dataset.col, 10);
+            if (cellTarget.classList.contains('col-header')) {
+                const colIndex = parseInt(cellTarget.dataset.col!, 10);
                 if (!e.shiftKey) {
                     lastSelectedColumn = colIndex;
                 }
@@ -1184,8 +1155,8 @@
                 return;
             }
 
-            if (target.classList.contains('row-header')) {
-                const rowIndex = parseInt(target.dataset.row, 10);
+            if (cellTarget.classList.contains('row-header')) {
+                const rowIndex = parseInt(cellTarget.dataset.row!, 10);
                 if (!e.shiftKey) {
                     lastSelectedRow = rowIndex;
                 }
@@ -1193,9 +1164,9 @@
                 return;
             }
 
-            if (target.classList.contains('corner-cell')) {
+            if (cellTarget.classList.contains('corner-cell')) {
                 clearSelection();
-                const allCells = table.querySelectorAll('td');
+                const allCells = table.querySelectorAll('td') as NodeListOf<HTMLElement>;
                 allCells.forEach(cell => {
                     cell.classList.add('selected');
                     selectedCells.add(cell);
@@ -1208,42 +1179,42 @@
                 return;
             }
 
-            if (target.tagName === 'TD') {
-                const row = parseInt(target.dataset.row, 10);
-                const col = parseInt(target.dataset.col, 10);
+            if (cellTarget.tagName === 'TD') {
+                const row = parseInt(cellTarget.dataset.row!, 10);
+                const col = parseInt(cellTarget.dataset.col!, 10);
 
                 if (e.ctrlKey || e.metaKey) {
-                    if (target.classList.contains('selected')) {
-                        target.classList.remove('selected');
-                        selectedCells.delete(target);
-                        if (target === activeCell) {
-                            target.classList.remove('active-cell');
+                    if (cellTarget.classList.contains('selected')) {
+                        cellTarget.classList.remove('selected');
+                        selectedCells.delete(cellTarget);
+                        if (cellTarget === activeCell) {
+                            cellTarget.classList.remove('active-cell');
                             activeCell = null;
 
-                            const remainingSelected = document.querySelector('td.selected');
+                            const remainingSelected = document.querySelector('td.selected') as HTMLElement;
                             if (remainingSelected) {
                                 remainingSelected.classList.add('active-cell');
                                 activeCell = remainingSelected;
                             }
                         }
                     } else {
-                        target.classList.add('selected');
-                        selectedCells.add(target);
+                        cellTarget.classList.add('selected');
+                        selectedCells.add(cellTarget);
                         if (activeCell) {
                             activeCell.classList.remove('active-cell');
                         }
-                        target.classList.add('active-cell');
-                        activeCell = target;
+                        cellTarget.classList.add('active-cell');
+                        activeCell = cellTarget;
                     }
                     updateSelectionInfo();
                 } else if (e.shiftKey && activeCell) {
-                    const startRow = parseInt(activeCell.dataset.row, 10);
-                    const startCol = parseInt(activeCell.dataset.col, 10);
+                    const startRow = parseInt(activeCell.dataset.row!, 10);
+                    const startCol = parseInt(activeCell.dataset.col!, 10);
                     selectRange(startRow, startCol, row, col);
                 } else {
                     isSelecting = true;
                     selectionStart = { row, col };
-                    selectCell(target);
+                    selectCell(cellTarget);
                 }
             }
         });
@@ -1255,11 +1226,11 @@
             // Track last mouse position for auto-scroll
             lastMousePos = { x: e.clientX, y: e.clientY };
 
-            const target = e.target.closest('td');
+            const target = (e.target as HTMLElement).closest('td') as HTMLElement;
             if (!target) return;
 
-            const row = parseInt(target.dataset.row, 10);
-            const col = parseInt(target.dataset.col, 10);
+            const row = parseInt(target.dataset.row!, 10);
+            const col = parseInt(target.dataset.col!, 10);
 
             if (!selectionEnd || selectionEnd.row !== row || selectionEnd.col !== col) {
                 selectionEnd = { row, col };
@@ -1313,11 +1284,12 @@
                     const el = document.elementFromPoint(lastMousePos.x, lastMousePos.y);
                     const nearestCell = el ? el.closest && el.closest('td') : null;
                     if (nearestCell) {
-                        const r = parseInt(nearestCell.dataset.row, 10);
-                        const c = parseInt(nearestCell.dataset.col, 10);
+                        const htmlCell = nearestCell as HTMLElement;
+                        const r = parseInt(htmlCell.dataset.row!, 10);
+                        const c = parseInt(htmlCell.dataset.col!, 10);
                         if (!selectionEnd || selectionEnd.row !== r || selectionEnd.col !== c) {
                             selectionEnd = { row: r, col: c };
-                            selectRange(selectionStart.row, selectionStart.col, r, c);
+                            selectRange(selectionStart!.row, selectionStart!.col, r, c);
                         }
                     }
                 }
@@ -1347,19 +1319,19 @@
             if (isEditMode) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    const active = document.activeElement;
+                    const active = document.activeElement as HTMLElement;
                     if (active && active.tagName === 'TD') {
                         const r = parseInt(active.getAttribute('data-row') || '0', 10);
                         const c = parseInt(active.getAttribute('data-col') || '0', 10);
-                        const next = document.querySelector('td[data-row="' + (r + 1) + '"][data-col="' + c + '"]');
+                        const next = document.querySelector('td[data-row="' + (r + 1) + '"][data-col="' + c + '"]') as HTMLElement;
                         if (next) {
                             next.focus();
                             const range = document.createRange();
                             const sel = window.getSelection();
                             range.selectNodeContents(next);
                             range.collapse(false);
-                            sel.removeAllRanges();
-                            sel.addRange(range);
+                            sel!.removeAllRanges();
+                            sel!.addRange(range);
                         }
                     }
                 }
@@ -1374,7 +1346,7 @@
 
             if (isCmdOrCtrl && e.key.toLowerCase() === 'a') {
                 e.preventDefault();
-                const allCells = table.querySelectorAll('td');
+                const allCells = table.querySelectorAll('td') as NodeListOf<HTMLElement>;
                 clearSelection();
                 allCells.forEach(cell => {
                     cell.classList.add('selected');
@@ -1390,13 +1362,13 @@
 
         document.addEventListener('click', (e) => {
             if (isEditMode) return;
-            if (!e.target.closest('table') && !e.target.closest('.toolbar')) {
+            if (!(e.target as HTMLElement).closest('table') && !(e.target as HTMLElement).closest('.toolbar')) {
                 clearSelection();
             }
         });
     }
 
-    function ensureLinkTooltip() {
+    function ensureLinkTooltip(): HTMLElement {
         if (linkTooltip) return linkTooltip;
         linkTooltip = document.createElement('div');
         linkTooltip.id = 'linkTooltip';
@@ -1424,7 +1396,7 @@
         return linkTooltip;
     }
 
-    function showLinkTooltipForCell(cellEl) {
+    function showLinkTooltipForCell(cellEl: HTMLElement | null) {
         if (!currentSettings.hyperlinkPreview) return;
         if (!cellEl) return;
         const url = cellEl.getAttribute('data-hyperlink') || '';
@@ -1434,8 +1406,8 @@
         const urlEl = tt.querySelector('#linkTooltipUrl');
         if (urlEl) urlEl.textContent = url;
 
-        const openBtn = tt.querySelector('#linkTooltipOpen');
-        const copyBtn = tt.querySelector('#linkTooltipCopy');
+        const openBtn = tt.querySelector('#linkTooltipOpen') as HTMLElement;
+        const copyBtn = tt.querySelector('#linkTooltipCopy') as HTMLElement;
 
         if (openBtn) {
             openBtn.onclick = (e) => {
@@ -1491,7 +1463,7 @@
 
         table.addEventListener('mouseover', (e) => {
             if (isEditMode) return;
-            const t = e && e.target;
+            const t = e && (e.target as HTMLElement);
             const el = t && t.nodeType === 3 ? t.parentElement : t;
             const cell = el && el.closest ? el.closest('td[data-hyperlink]') : null;
             if (!cell) return;
@@ -1499,19 +1471,19 @@
                 clearTimeout(linkTooltipHideTimer);
                 linkTooltipHideTimer = null;
             }
-            showLinkTooltipForCell(cell);
+            showLinkTooltipForCell(cell as HTMLElement);
         });
 
         table.addEventListener('mouseout', (e) => {
             if (isEditMode) return;
-            const toEl = e.relatedTarget;
+            const toEl = e.relatedTarget as HTMLElement;
             if (!toEl) {
                 scheduleHideLinkTooltip();
                 return;
             }
 
             // If we are moving to an element inside the same cell, don't hide
-            const fromCell = e.target.closest('td[data-hyperlink]');
+            const fromCell = (e.target as HTMLElement).closest('td[data-hyperlink]');
             const toCell = toEl.closest ? toEl.closest('td[data-hyperlink]') : null;
             if (fromCell && toCell === fromCell) {
                 return;
@@ -1526,7 +1498,7 @@
         });
     }
 
-    function applySettings(settings) {
+    function applySettings(settings: any) {
         currentSettings = {
             firstRowIsHeader: settings && typeof settings.firstRowIsHeader === 'boolean' ? settings.firstRowIsHeader : currentSettings.firstRowIsHeader,
             stickyToolbar: settings && typeof settings.stickyToolbar === 'boolean' ? settings.stickyToolbar : currentSettings.stickyToolbar,
@@ -1535,10 +1507,10 @@
         };
 
         // Update settings panel UI
-        const chkHeader = document.getElementById('chkHeaderRow');
-        const chkSticky = document.getElementById('chkStickyHeader');
-        const chkToolbar = document.getElementById('chkStickyToolbar');
-        const chkHyperlink = document.getElementById('chkHyperlinkPreview');
+        const chkHeader = document.getElementById('chkHeaderRow') as HTMLInputElement;
+        const chkSticky = document.getElementById('chkStickyHeader') as HTMLInputElement;
+        const chkToolbar = document.getElementById('chkStickyToolbar') as HTMLInputElement;
+        const chkHyperlink = document.getElementById('chkHyperlinkPreview') as HTMLInputElement;
         if (chkHeader) chkHeader.checked = !!currentSettings.firstRowIsHeader;
         if (chkSticky) chkSticky.checked = !!currentSettings.stickyHeader;
         if (chkToolbar) chkToolbar.checked = !!currentSettings.stickyToolbar;
@@ -1546,7 +1518,7 @@
 
         // Sticky toolbar behavior (CSV parity): when disabled, move toolbar into the scrollable content.
         const toolbar = document.querySelector('.toolbar');
-        const headerBg = document.querySelector('.header-background');
+        const headerBg = document.querySelector('.header-background') as HTMLElement;
         const content = document.getElementById('content');
         const scrollArea = document.querySelector('.table-scroll');
 
@@ -1571,11 +1543,11 @@
             if (headerBg) headerBg.style.display = 'none';
         }
 
-        const chkHeaderRow = document.getElementById('chkHeaderRow');
+        const chkHeaderRow = document.getElementById('chkHeaderRow') as HTMLInputElement;
         if (chkHeaderRow) chkHeaderRow.checked = !!currentSettings.firstRowIsHeader;
-        const chkStickyToolbar = document.getElementById('chkStickyToolbar');
+        const chkStickyToolbar = document.getElementById('chkStickyToolbar') as HTMLInputElement;
         if (chkStickyToolbar) chkStickyToolbar.checked = !!currentSettings.stickyToolbar;
-        const chkStickyHeader = document.getElementById('chkStickyHeader');
+        const chkStickyHeader = document.getElementById('chkStickyHeader') as HTMLInputElement;
         if (chkStickyHeader) {
             chkStickyHeader.checked = !!currentSettings.stickyHeader;
             chkStickyHeader.disabled = !currentSettings.firstRowIsHeader;
@@ -1585,7 +1557,7 @@
                 document.body.classList.remove('sticky-header-enabled');
             }
         }
-        const chkHyperlinkPreview = document.getElementById('chkHyperlinkPreview');
+        const chkHyperlinkPreview = document.getElementById('chkHyperlinkPreview') as HTMLInputElement;
         if (chkHyperlinkPreview) chkHyperlinkPreview.checked = !!currentSettings.hyperlinkPreview;
 
         if (!currentSettings.hyperlinkPreview) hideLinkTooltip();
@@ -1595,7 +1567,7 @@
         vscode.postMessage({ command: 'updateSettings', settings: currentSettings });
     }
 
-    function setEditMode(enabled) {
+    function setEditMode(enabled: boolean) {
         isEditMode = !!enabled;
         document.body.classList.toggle('edit-mode', isEditMode);
 
@@ -1642,9 +1614,10 @@
         const table = document.querySelector('#tableContainer table');
         if (!table) return;
         table.querySelectorAll('td[contenteditable="true"]').forEach(td => {
-            const currentText = normalizeCellText(td.textContent || '');
-            td.textContent = currentText;
-            td.dataset.originalText = currentText;
+            const htmlTd = td as HTMLElement;
+            const currentText = normalizeCellText(htmlTd.textContent || '');
+            htmlTd.textContent = currentText;
+            htmlTd.dataset.originalText = currentText;
         });
     }
 
@@ -1658,21 +1631,22 @@
         setButtonsEnabled(false);
 
         if (document.activeElement && document.activeElement.tagName === 'TD') {
-            document.activeElement.blur();
+            (document.activeElement as HTMLElement).blur();
         }
         clearSelection();
         if (window.getSelection) {
-            window.getSelection().removeAllRanges();
+            window.getSelection()!.removeAllRanges();
         }
 
-        const edits = [];
+        const edits: any[] = [];
         table.querySelectorAll('td[contenteditable="true"]').forEach(td => {
-            const row = parseInt(td.getAttribute('data-rownum') || '0', 10);
-            const col = parseInt(td.getAttribute('data-colnum') || '0', 10);
+            const htmlTd = td as HTMLElement;
+            const row = parseInt(htmlTd.getAttribute('data-rownum') || '0', 10);
+            const col = parseInt(htmlTd.getAttribute('data-colnum') || '0', 10);
             if (!row || !col) return;
 
-            const original = (td.dataset.originalText || '').replace(/\u00a0/g, '');
-            const current = (td.textContent || '').replace(/\u00a0/g, '');
+            const original = (htmlTd.dataset.originalText || '').replace(/\u00a0/g, '');
+            const current = (htmlTd.textContent || '').replace(/\u00a0/g, '');
 
             if (current !== original) {
                 edits.push({ row, col, value: current });
@@ -1684,7 +1658,7 @@
         vscode.postMessage({ command: 'saveXlsxEdits', sheetIndex: currentWorksheet, edits });
     }
 
-    function setExpandedMode(isExpanded) {
+    function setExpandedMode(isExpanded: boolean) {
         document.body.classList.toggle('expanded-mode', !!isExpanded);
 
         const expandIcon = document.getElementById('expandIcon');
@@ -1697,216 +1671,179 @@
     }
 
     function wireSettingsUI() {
-        const openBtn = document.getElementById('openSettingsButton');
-        const panel = document.getElementById('settingsPanel');
-        const cancelBtn = document.getElementById('settingsCancelButton');
-        if (!openBtn || !panel || !cancelBtn) return;
-
-        let repositionHandlers = null;
-
-        function repositionPanel() {
-            const container = document.querySelector('.toolbar');
-            if (!container) return;
-            const rect = container.getBoundingClientRect();
-            panel.style.position = 'fixed';
-            panel.style.left = Math.max(8, rect.left) + 'px';
-            panel.style.top = rect.bottom + 'px';
-            const maxWidth = Math.min(window.innerWidth - 16, rect.width);
-            panel.style.width = Math.max(280, maxWidth) + 'px';
-            panel.style.zIndex = '200001';
-        }
-
-        function openPanel() {
-            // If the panel is inside the toolbar, move it to document.body so it's not clipped by toolbar overflow/stacking context
-            const container = document.querySelector('.toolbar');
-            if (container && panel.parentNode !== document.body) {
-                document.body.appendChild(panel);
+        const settings = [
+            {
+                id: 'chkHeaderRow',
+                label: 'Header Row',
+                onChange: (val: boolean) => {
+                    currentSettings.firstRowIsHeader = val;
+                    applySettings(currentSettings);
+                    postSettings();
+                },
+                defaultValue: currentSettings.firstRowIsHeader
+            },
+            {
+                id: 'chkStickyHeader',
+                label: 'Sticky Header',
+                onChange: (val: boolean) => {
+                    currentSettings.stickyHeader = val;
+                    applySettings(currentSettings);
+                    postSettings();
+                },
+                defaultValue: currentSettings.stickyHeader
+            },
+            {
+                id: 'chkStickyToolbar',
+                label: 'Sticky Toolbar',
+                onChange: (val: boolean) => {
+                    currentSettings.stickyToolbar = val;
+                    applySettings(currentSettings);
+                    postSettings();
+                },
+                defaultValue: currentSettings.stickyToolbar
+            },
+            {
+                id: 'chkHyperlinkPreview',
+                label: 'Hyperlink Preview',
+                onChange: (val: boolean) => {
+                    currentSettings.hyperlinkPreview = val;
+                    applySettings(currentSettings);
+                    postSettings();
+                },
+                defaultValue: currentSettings.hyperlinkPreview
             }
+        ];
 
-            panel.classList.remove('hidden');
-            panel.classList.add('floating');
-            panel.setAttribute('aria-hidden', 'false');
-            document.body.classList.add('settings-open');
-            if (container) {
-                container.classList.add('settings-open');
-                container.classList.add('expanded-toolbar');
-            }
+        SettingsManager.renderPanel(document.getElementById('toolbar')!, 'settingsPanel', 'settingsCancelButton', settings);
 
-            repositionPanel();
-            repositionHandlers = () => repositionPanel();
-            window.addEventListener('resize', repositionHandlers);
-            window.addEventListener('scroll', repositionHandlers, true);
-        }
-
-        function closePanel() {
-            panel.classList.add('hidden');
-            panel.classList.remove('floating');
-            panel.setAttribute('aria-hidden', 'true');
-            document.body.classList.remove('settings-open');
-            const container = document.querySelector('.toolbar');
-            if (container) {
-                container.classList.remove('settings-open');
-                const chkStickyToolbar = document.getElementById('chkStickyToolbar');
-                const cfgSticky = chkStickyToolbar ? chkStickyToolbar.checked : true;
-                if (!cfgSticky) container.classList.remove('expanded-toolbar');
-
-                // Move the panel back into the toolbar (keep DOM tidy)
-                if (panel.parentNode === document.body) {
-                    container.insertBefore(panel, container.firstChild);
-                }
-            }
-
-            // remove inline positioning
-            panel.style.position = '';
-            panel.style.left = '';
-            panel.style.top = '';
-            panel.style.width = '';
-            panel.style.zIndex = '';
-
-            if (repositionHandlers) {
-                window.removeEventListener('resize', repositionHandlers);
-                window.removeEventListener('scroll', repositionHandlers, true);
-                repositionHandlers = null;
-            }
-        }
-
-        openBtn.addEventListener('click', () => {
-            if (panel.classList.contains('hidden')) openPanel();
-            else closePanel();
-        });
-
-        cancelBtn.addEventListener('click', () => closePanel());
-
-        // Settings checkboxes
-        const chkHeaderRow = document.getElementById('chkHeaderRow');
-        if (chkHeaderRow) {
-            chkHeaderRow.addEventListener('change', () => {
-                currentSettings.firstRowIsHeader = !!chkHeaderRow.checked;
-                applySettings(currentSettings);
-                postSettings();
-            });
-        }
-
-        const chkStickyToolbar = document.getElementById('chkStickyToolbar');
-        if (chkStickyToolbar) {
-            chkStickyToolbar.addEventListener('change', () => {
-                currentSettings.stickyToolbar = !!chkStickyToolbar.checked;
-                applySettings(currentSettings);
-                postSettings();
-            });
-        }
-
-        const chkStickyHeader = document.getElementById('chkStickyHeader');
-        if (chkStickyHeader) {
-            chkStickyHeader.addEventListener('change', () => {
-                currentSettings.stickyHeader = !!chkStickyHeader.checked;
-                applySettings(currentSettings);
-                postSettings();
-            });
-        }
-
-        const chkHyperlinkPreview = document.getElementById('chkHyperlinkPreview');
-        if (chkHyperlinkPreview) {
-            chkHyperlinkPreview.addEventListener('change', () => {
-                currentSettings.hyperlinkPreview = !!chkHyperlinkPreview.checked;
-                applySettings(currentSettings);
-                postSettings();
-            });
-        }
-
-        document.addEventListener('click', (e) => {
-            if (!panel.classList.contains('hidden')) {
-                if (!e.target.closest('.settings-panel') && !e.target.closest('#openSettingsButton')) {
-                    closePanel();
-                }
-            }
-        });
+        new SettingsManager('openSettingsButton', 'settingsPanel', 'settingsCancelButton', settings);
     }
 
     function attachHandlersOnce() {
         if (handlersAttached) return;
         handlersAttached = true;
 
-        // Sheet selector
-        const sheetSelector = document.getElementById('sheetSelector');
-        if (sheetSelector) {
-            sheetSelector.addEventListener('change', (e) => {
-                if (isEditMode) return;
-                currentWorksheet = parseInt(e.target.value, 10);
-                clearSelection();
-                renderWorksheet(currentWorksheet);
-            });
-        }
+        const toolbar = new ToolbarManager('toolbar');
 
-        // Edit Table
-        const toggleTableEditButton = document.getElementById('toggleTableEditButton');
-        const saveTableEditsButton = document.getElementById('saveTableEditsButton');
-        const cancelTableEditsButton = document.getElementById('cancelTableEditsButton');
+        // Sheet Selector
+        const sheetSelector = document.createElement('select');
+        sheetSelector.id = 'sheetSelector';
+        sheetSelector.className = 'sheet-selector';
+        sheetSelector.title = 'Select sheet';
+        sheetSelector.addEventListener('change', (e) => {
+            if (isEditMode) return;
+            currentWorksheet = parseInt((e.target as HTMLSelectElement).value, 10);
+            clearSelection();
+            renderWorksheet(currentWorksheet);
+        });
+        
+        toolbar.prependElement(sheetSelector);
 
-        if (toggleTableEditButton) {
-            toggleTableEditButton.addEventListener('click', () => {
-                setEditMode(true);
-            });
-        }
-        if (saveTableEditsButton) {
-            saveTableEditsButton.addEventListener('click', () => {
-                saveEdits(true);
-            });
-        }
-        if (cancelTableEditsButton) {
-            cancelTableEditsButton.addEventListener('click', () => {
-                setEditMode(false);
-                renderWorksheet(currentWorksheet);
-            });
-        }
+        // Inject tooltip if variables are present
+        InfoTooltip.inject('toolbar', (window as any).viewImgUri, (window as any).logoSvgUri, 'table view');
 
-        // Theme manager component
-        const themeManager = new ThemeManager('toggleBackgroundButton', {
-            onBeforeCycle: () => !isEditMode
-        }, vscode);
-
-        // Expand toggle
-        const toggleExpandButton = document.getElementById('toggleExpandButton');
-        if (toggleExpandButton) {
-            toggleExpandButton.addEventListener('click', () => {
-                if (isEditMode) return;
-                const state = toggleExpandButton.getAttribute('data-state') || 'default';
-                if (state === 'default') {
-                    toggleExpandButton.setAttribute('data-state', 'expanded');
-                    setExpandedMode(true);
-                } else {
-                    toggleExpandButton.setAttribute('data-state', 'default');
-                    setExpandedMode(false);
+        toolbar.setButtons([
+            {
+                id: 'toggleTableEditButton',
+                icon: '',
+                label: 'Edit Table',
+                tooltip: 'Edit XLSX directly in the table (text only)',
+                onClick: () => setEditMode(true)
+            },
+            {
+                id: 'saveTableEditsButton',
+                icon: '',
+                label: 'Save',
+                tooltip: 'Save table edits',
+                hidden: true,
+                onClick: () => saveEdits(true)
+            },
+            {
+                id: 'cancelTableEditsButton',
+                icon: '',
+                label: 'Cancel',
+                tooltip: 'Cancel table edits',
+                hidden: true,
+                onClick: () => {
+                    setEditMode(false);
+                    renderWorksheet(currentWorksheet);
                 }
-            });
+            },
+            {
+                id: 'toggleExpandButton',
+                icon: Icons.Expand,
+                label: 'Expand',
+                tooltip: 'Toggle Column Widths (Default / Expand All)',
+                onClick: () => {
+                    if (isEditMode) return;
+                    const btn = document.getElementById('toggleExpandButton');
+                    const state = btn?.getAttribute('data-state') || 'default';
+                    if (state === 'default') {
+                        btn?.setAttribute('data-state', 'expanded');
+                        if(btn) btn.innerHTML = Icons.Collapse + ' <span class="btn-label">Default</span>';
+                        setExpandedMode(true);
+                    } else {
+                        btn?.setAttribute('data-state', 'default');
+                        if(btn) btn.innerHTML = Icons.Expand + ' <span class="btn-label">Expand</span>';
+                        setExpandedMode(false);
+                    }
+                }
+            },
+            {
+                id: 'togglePlainViewButton',
+                icon: Icons.Table,
+                label: 'Plain',
+                tooltip: 'Toggle Plain View (removes all styling)',
+                onClick: () => {
+                    if (isEditMode) return;
+                    isPlainView = !isPlainView;
+                    document.body.classList.toggle('plain-view', isPlainView);
+                    
+                    const btn = document.getElementById('togglePlainViewButton');
+                    if (btn) {
+                        const labelSpan = btn.querySelector('.btn-label');
+                        if (labelSpan) labelSpan.textContent = isPlainView ? 'Styled' : 'Plain';
+                    }
+                    
+                    rowCache.clear();
+                    currentVisibleStart = 0;
+                    currentVisibleEnd = 0;
+                    renderWorksheet(currentWorksheet);
+                }
+            },
+            {
+                id: 'openSettingsButton',
+                icon: Icons.Settings,
+                tooltip: 'XLSX Settings',
+                cls: 'icon-only',
+                onClick: () => {}
+            },
+            {
+                id: 'toggleBackgroundButton',
+                icon: Icons.ThemeLight + Icons.ThemeDark + Icons.ThemeVSCode,
+                tooltip: 'Toggle Theme',
+                onClick: () => {}
+            }
+        ]);
+
+        // Ensure the "Plain/Styled" toggle shows the correct label on initial render
+        const togglePlainViewBtn = document.getElementById('togglePlainViewButton');
+        if (togglePlainViewBtn) {
+            const labelSpan = togglePlainViewBtn.querySelector('.btn-label');
+            if (labelSpan) labelSpan.textContent = isPlainView ? 'Styled' : 'Plain';
         }
 
-        // Plain View toggle
-        const togglePlainViewButton = document.getElementById('togglePlainViewButton');
-        if (togglePlainViewButton) {
-            togglePlainViewButton.addEventListener('click', () => {
-                if (isEditMode) return;
-                isPlainView = !isPlainView;
-                document.body.classList.toggle('plain-view', isPlainView);
-                
-                const plainViewText = document.getElementById('plainViewButtonText');
-                if (plainViewText) {
-                    plainViewText.textContent = isPlainView ? 'Styled' : 'Plain';
-                }
-                
-                // Re-render to apply/remove styling
-                rowCache.clear();
-                currentVisibleStart = 0;
-                currentVisibleEnd = 0;
-                renderWorksheet(currentWorksheet);
-            });
+        if (typeof ThemeManager !== 'undefined') {
+            new ThemeManager('toggleBackgroundButton', {
+                onBeforeCycle: () => !isEditMode
+            }, vscode);
         }
 
         wireSettingsUI();
     }
 
     function populateSheetSelector() {
-        const selector = document.getElementById('sheetSelector');
+        const selector = document.getElementById('sheetSelector') as HTMLSelectElement;
         if (!selector) return;
 
         selector.innerHTML = '';
@@ -1953,11 +1890,7 @@
 
         // Handle rowsData response for virtual scrolling
         if (message.command === 'rowsData') {
-            if (message.requestId && pendingRequests.has(message.requestId)) {
-                const { resolve } = pendingRequests.get(message.requestId);
-                pendingRequests.delete(message.requestId);
-                resolve(message.rows || []);
-            }
+            virtualLoader.resolveRequest(message.requestId, message.rows || []);
             return;
         }
 
@@ -1982,7 +1915,7 @@
         if (message.command === 'init') {
             // Convert old format to new format
             const worksheets = Array.isArray(message.worksheets) ? message.worksheets : [];
-            worksheetsMeta = worksheets.map((ws, index) => ({
+            worksheetsMeta = worksheets.map((ws: any, index: number) => ({
                 name: ws.name,
                 index,
                 totalRows: ws.data ? ws.data.maxRow : 0,
@@ -1991,9 +1924,9 @@
                 mergedCells: ws.data ? ws.data.mergedCells : []
             }));
             // Also cache all rows since they were sent
-            worksheets.forEach((ws, wsIndex) => {
+            worksheets.forEach((ws: any, wsIndex: number) => {
                 if (ws.data && ws.data.rows) {
-                    ws.data.rows.forEach((row, rowIndex) => {
+                    ws.data.rows.forEach((row: any, rowIndex: number) => {
                         if (wsIndex === 0) {
                             rowCache.set(rowIndex, row);
                         }

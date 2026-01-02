@@ -2,185 +2,6 @@
     box-sizing: border-box;
 }
 
-:root {
-    /* Base colors */
-    --bg-color: #ffffff;
-    --text-color: #1d1d1f;
-    --text-muted: #86868b;
-    --border-color: #d2d2d7;
-    
-    /* Surface colors */
-    --header-bg: #f5f5f7;
-    --row-hover-bg: #f5f5f7;
-    --panel-bg: rgba(245, 245, 247, 0.9);
-    --overlay-bg: rgba(255, 255, 255, 0.95);
-    
-    /* Accent colors */
-    --accent-color: #007aff;
-    --accent-bg: rgba(0, 122, 255, 0.1);
-    --accent-hover: #0062cc;
-    --accent-shadow: rgba(0, 122, 255, 0.2);
-    
-    /* Selection */
-    --selection-border: #007aff;
-    --selection-bg: rgba(0, 122, 255, 0.18);
-    
-    /* Semantic colors */
-    --success-color: #34c759;
-    --success-bg: rgba(52, 199, 89, 0.15);
-    --warning-color: #ff9500;
-    --warning-bg: rgba(255, 149, 0, 0.15);
-    --error-color: #ff3b30;
-    --error-bg: rgba(255, 59, 48, 0.15);
-    --info-color: #5856d6;
-    --info-bg: rgba(88, 86, 214, 0.15);
-    
-    /* Interactive */
-    --button-bg: #007aff;
-    --button-text: #ffffff;
-    --button-hover: #0062cc;
-    --header-hover-bg: #e8e8ed;
-    
-    /* Tooltip */
-    --tooltip-bg: #f5f5f7;
-    --tooltip-text: #1d1d1f;
-    --tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    
-    /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
-    
-    /* Misc */
-    --focus-ring: rgba(0, 122, 255, 0.4);
-    --contrast-text: #ffffff;
-    --font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --header-height: 48px;
-
-    /* Scrollbar theming (defaults) - light theme */
-    --scrollbar-thumb: var(--text-muted);
-    --scrollbar-thumb-hover: color-mix(in srgb, var(--text-muted) 60%, black 40%);
-    --scrollbar-track: transparent;
-}  
-
-body.dark-mode {
-    /* Base colors */
-    --bg-color: #1c1c1e;
-    --text-color: #f5f5f7;
-    --text-muted: #98989d;
-    --border-color: #38383a;
-    
-    /* Surface colors */
-    --header-bg: #2c2c2e;
-    --row-hover-bg: #2c2c2e;
-    --panel-bg: rgba(44, 44, 46, 0.9);
-    --overlay-bg: rgba(44, 44, 46, 0.95);
-    
-    /* Accent colors */
-    --accent-color: #0a84ff;
-    --accent-bg: rgba(10, 132, 255, 0.15);
-    --accent-hover: #409cff;
-    --accent-shadow: rgba(10, 132, 255, 0.3);
-    
-    /* Selection */
-    --selection-border: #0a84ff;
-    --selection-bg: rgba(10, 132, 255, 0.25);
-    
-    /* Semantic colors */
-    --success-color: #30d158;
-    --success-bg: rgba(48, 209, 88, 0.2);
-    --warning-color: #ff9f0a;
-    --warning-bg: rgba(255, 159, 10, 0.2);
-    --error-color: #ff453a;
-    --error-bg: rgba(255, 69, 58, 0.2);
-    --info-color: #5e5ce6;
-    --info-bg: rgba(94, 92, 230, 0.2);
-    
-    /* Interactive */
-    --button-bg: #0a84ff;
-    --button-text: #ffffff;
-    --button-hover: #409cff;
-    --header-hover-bg: #3a3a3c;
-    
-    /* Tooltip */
-    --tooltip-bg: #2c2c2e;
-    --tooltip-text: #f5f5f7;
-    --tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    
-    /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.4);
-    
-    /* Misc */
-    --focus-ring: rgba(10, 132, 255, 0.5);
-    --contrast-text: #ffffff;
-
-    /* Scrollbar overrides for dark mode - increased visibility */
-    --scrollbar-thumb: rgba(255, 255, 255, 0.24);
-    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.36);
-    --scrollbar-track: rgba(255, 255, 255, 0.04);
-} 
-
-body.vscode-theme {
-    /* Base surfaces */
-    --bg-color: var(--vscode-editor-background, #ffffff);
-    --text-color: var(--vscode-editor-foreground, #1d1d1f);
-    --text-muted: var(--vscode-descriptionForeground, #86868b);
-    --border-color: var(--vscode-panel-border, #d2d2d7);
-
-    /* Surface colors */
-    --header-bg: var(--vscode-editorWidget-background, #f5f5f7);
-    --row-hover-bg: var(--vscode-list-hoverBackground, rgba(0, 132, 255, 0.076));
-    --panel-bg: var(--vscode-editorWidget-background, rgba(245, 245, 247, 0.9));
-    --overlay-bg: var(--vscode-notifications-background, rgba(255, 255, 255, 0.95));
-
-    /* Accent */
-    --accent-color: var(--vscode-focusBorder, #007aff);
-    --accent-bg: color-mix(in srgb, var(--vscode-focusBorder, #007aff) 15%, transparent);
-    --accent-hover: var(--vscode-button-hoverBackground, #0062cc);
-    --accent-shadow: color-mix(in srgb, var(--vscode-focusBorder, #007aff) 25%, transparent);
-
-    /* Selection */
-    --selection-border: var(--vscode-focusBorder, #007aff);
-    --selection-bg: color-mix(in srgb, var(--vscode-focusBorder, #007aff) 20%, transparent);
-
-    /* Semantic colors */
-    --success-color: var(--vscode-testing-iconPassed, #34c759);
-    --success-bg: color-mix(in srgb, var(--vscode-testing-iconPassed, #34c759) 15%, transparent);
-    --warning-color: var(--vscode-editorWarning-foreground, #ff9500);
-    --warning-bg: color-mix(in srgb, var(--vscode-editorWarning-foreground, #ff9500) 15%, transparent);
-    --error-color: var(--vscode-errorForeground, #ff3b30);
-    --error-bg: color-mix(in srgb, var(--vscode-errorForeground, #ff3b30) 15%, transparent);
-    --info-color: var(--vscode-editorInfo-foreground, #5856d6);
-    --info-bg: color-mix(in srgb, var(--vscode-editorInfo-foreground, #5856d6) 15%, transparent);
-
-    /* Buttons */
-    --button-bg: var(--vscode-button-background, #007aff);
-    --button-hover: var(--vscode-button-hoverBackground, #0062cc);
-    --button-text: var(--vscode-button-foreground, #ffffff);
-    --header-hover-bg: var(--vscode-list-hoverBackground, #e8e8ed);
-
-    /* Tooltip */
-    --tooltip-bg: var(--vscode-editorHoverWidget-background, #f5f5f7);
-    --tooltip-text: var(--vscode-editorHoverWidget-foreground, #1d1d1f);
-    --tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-
-    /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
-
-    /* Misc */
-    --focus-ring: var(--vscode-focusBorder, rgba(0, 122, 255, 0.4));
-    --contrast-text: var(--vscode-button-foreground, #ffffff);
-
-    /* Scrollbar variables mapped to vscode theme - use button colors */
-    --scrollbar-thumb: var(--button-bg);
-    --scrollbar-thumb-hover: var(--button-hover);
-    --scrollbar-track: transparent;
-} 
-
 body {
     font-family: var(--font-family);
     padding: var(--header-height) 0 0 3px;
@@ -193,6 +14,11 @@ body {
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.3s ease, color 0.3s ease;
 } 
+
+/* Hide elements in edit mode */
+body.edit-mode .edit-mode-hide {
+    display: none !important;
+}
 
 body.edit-mode #content {
     outline: 3px solid var(--accent-color);
@@ -317,10 +143,6 @@ thead th:first-child {
     white-space: nowrap;
 }
 
-.settings-panel.hidden {
-    display: none !important;
-}
-
 .settings-panel.floating {
     position: fixed;
     left: 12px;
@@ -336,24 +158,6 @@ thead th:first-child {
     max-width: 120px;
     min-width: 72px;
     flex-shrink: 0;
-}
-
-#settingsCancelButton {
-    max-width: 70px !important;
-    background-color: var(--button-bg);
-    color: var(--button-text);
-    box-shadow: var(--shadow-sm);
-}
-
-#settingsCancelButton:hover {
-    background-color: var(--button-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-}
-
-#settingsCancelButton:active {
-    transform: translateY(0);
-    box-shadow: none;
 }
 
 @media (max-width: 640px) {
@@ -381,15 +185,6 @@ body.sticky-header-enabled tbody tr.header-row th.row-header {
     z-index: 30;
     background-color: var(--header-bg);
 }
-
-body:not(.sticky-toolbar-enabled) .header-background {
-    display: none;
-}
-
-body:not(.sticky-toolbar-enabled) {
-    padding-top: 0px;
-    --header-height: 6px;
-} 
 
 .toolbar.expanded-toolbar {
     padding: 12px 18px;
@@ -431,21 +226,6 @@ body:not(.sticky-toolbar-enabled) .toolbar {
     width: 100%;
 }
 
-.header-background {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: var(--header-height);
-    background-color: var(--bg-color);
-    opacity: 0.8;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 9999;
-    border-bottom: 1px solid var(--border-color);
-    pointer-events: none;
-} 
-
 .toolbar img {
     flex-shrink: 0;
     max-width: none !important;
@@ -459,34 +239,6 @@ body:not(.sticky-toolbar-enabled) .toolbar {
     width: 16px;
     height: 16px;
     stroke-width: 2;
-}
-
-.toggle-button {
-    height: 32px;
-    padding: 0 14px;
-    font-size: 13px;
-    font-weight: 500;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background-color: var(--button-bg);
-    color: var(--button-text);
-    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-    box-shadow: var(--shadow-sm);
-}
-
-.toggle-button:hover {
-    background-color: var(--button-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-}
-
-.toggle-button:active {
-    transform: translateY(0);
-    box-shadow: none;
 }
 
 td {
@@ -504,60 +256,6 @@ td span.cell-content {
 }
 
 /* Tooltip Styling */
-.tooltip {
-    position: relative;
-    display: inline-block;
-    z-index: 100000;
-}
-
-.tooltip .tooltiptext {
-    visibility: hidden;
-    width: 300px;
-    max-width: calc(100vw - 32px);
-    background-color: var(--tooltip-bg);
-    color: var(--tooltip-text);
-    text-align: left;
-    border-radius: 8px;
-    padding: 10px;
-    position: absolute;
-    z-index: 100000 !important;
-    top: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%) translateY(-10px);
-    opacity: 0;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    white-space: normal;
-    line-height: 1.5;
-    box-shadow: var(--tooltip-shadow);
-    border: 1px solid var(--border-color);
-    font-size: 12px;
-    pointer-events: none;
-}
-
-.tooltip:hover .tooltiptext {
-    visibility: visible;
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-    pointer-events: auto;
-}
-
-.tooltip .tooltiptext span {
-    color: var(--warning-color);
-    font-weight: 600;
-}
-
-.tooltip .tooltiptext .warning {
-    color: var(--error-color);
-    font-weight: 700;
-    display: block;
-    margin-bottom: 4px;
-}
-
-.tooltip .tooltiptext .instruction {
-    color: var(--info-color);
-    font-weight: normal;
-}
-
 /* Selection Styles */
 td.selected {
     border: 2px solid var(--selection-border) !important;
@@ -667,9 +365,7 @@ td:hover {
     border: 1px solid var(--border-color);
 }
 
-.hidden {
-    display: none !important;
-}
+
 
 body.edit-mode td {
     user-select: text;
@@ -745,58 +441,20 @@ body.edit-mode td[contenteditable="true"]:focus {
     height: auto;
     margin-top: 0;
     margin-bottom: 0;
-    display: flex;
     gap: 12px;
-    position: relative;
     top: auto;
     left: auto;
     width: 100%;
     box-sizing: border-box;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: visible;
     white-space: nowrap;
     padding: 4px 12px;
     align-items: center;
-    z-index: 10000;
 } 
 
-body.sticky-toolbar-enabled .toolbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-}
 
 /* --- Settings Button (Icon Only) --- */
-.toggle-button.icon-only {
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.toggle-button.icon-only svg {
-    margin: 0;
-}
-
-/* --- Settings Panel --- */
-.settings-panel {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--panel-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    color: var(--text-color);
-    padding: 12px 20px;
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-lg);
-}
-
 /* Container for checkboxes */
 .settings-group {
     display: flex;

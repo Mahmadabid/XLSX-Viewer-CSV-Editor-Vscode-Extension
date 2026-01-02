@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.6.5 - Markdown Viewer & Editor
+- **Markdown Viewer & Editor (.md)**: Added a new Github Flavored Markdown viewer & editor for `.md` files with preview and edit modes, a toolbar (Edit Preview, Save, Cancel, Word Wrap, Settings), and a lightweight renderer for common Markdown (.md) features (headers, lists, code blocks, tables, task lists, images, links).
+- **Split Edit Mode**: Live preview with synchronized scrolling between editor and preview panes.
+- **Repository Update**:
+  - Updated GitHub repository URL to `https://github.com/Mahmadabid/XLSX-CSV-TSV-MARKDOWN-Editor-Vscode-Extension`.
+
 ## v1.6.4 - Plain View Styling & Repository Update
 - **Plain View Styling**:
   - Fixed header row styling in plain view mode to match CSV behavior (bold text with header background).

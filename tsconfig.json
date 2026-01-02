@@ -4,11 +4,14 @@
 		"target": "ES2020",
 		"outDir": "dist",
 		"lib": [
-			"ES2020"
+			"ES2020",
+			"DOM"
 		],
 		"sourceMap": true,
 		"rootDir": "src",
-		"strict": true
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": ["node_modules", ".vscode-test"]

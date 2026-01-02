@@ -106,6 +106,6 @@ If you find this extension helpful, please **rate it on the VS Code Marketplace*
 ---
 
 📢 **Follow us for updates!**\
-🔗 GitHub: [XLSX, CSV & TSV Editor Github Link](https://github.com/Mahmadabid/XLSX-CSV-TSV-MARKDOWN-Editor-Vscode-Extension)\
+🔗 GitHub: [XLSX, CSV, TSV & Markdown Editor Github Link](https://github.com/Mahmadabid/XLSX-CSV-TSV-MARKDOWN-Editor-Vscode-Extension)\
 🔗 Marketplace: [VS Code Extension Link](https://marketplace.visualstudio.com/items?itemName=muhammad-ahmad.xlsx-viewer)\
 🔗 Open VSX: [Open VSX Link](https://open-vsx.org/extension/muhammad-ahmad/xlsx-viewer)

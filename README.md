@@ -99,6 +99,11 @@ We welcome contributions! Feel free to **submit issues, feature requests, or pul
 
 This project is licensed under the **MIT License** - feel free to use and modify it.
 
+---
+
+### 💬 Help & Feedback
+If you have any questions, encounter issues, or want to provide feedback, please fill out our [Help & Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSe5AqE_f1-WqUlQmvuPn1as3Mkn4oLjA0EDhNssetzt63ONzA/viewform).
+
 ## ⭐ Support
 
 If you find this extension helpful, please **rate it on the VS Code Marketplace** and share it with others!

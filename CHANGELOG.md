@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.6.6 - Help & Feedback
+- **Help Button**: Added a help button to the toolbar in all webviews (XLSX, CSV, TSV, Markdown) to easily access documentation and provide feedback.
+
 ## v1.6.5 - Markdown Viewer & Editor
 - **Markdown Viewer & Editor (.md)**: Added a new Github Flavored Markdown viewer & editor for `.md` files with preview and edit modes, a toolbar (Edit Preview, Save, Cancel, Word Wrap, Settings), and a lightweight renderer for common Markdown (.md) features (headers, lists, code blocks, tables, task lists, images, links).
 - **Split Edit Mode**: Live preview with synchronized scrolling between editor and preview panes.

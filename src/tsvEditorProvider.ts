@@ -246,6 +246,17 @@ export class TSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             allRows[message.rowIndex] = message.rowData;
                         }
                         break;
+
+                    case 'openExternal':
+                        try {
+                            const url = typeof message.url === 'string' ? message.url : '';
+                            if (url) {
+                                await vscode.env.openExternal(vscode.Uri.parse(url));
+                            }
+                        } catch {
+                            // ignore
+                        }
+                        break;
                 }
             });
 

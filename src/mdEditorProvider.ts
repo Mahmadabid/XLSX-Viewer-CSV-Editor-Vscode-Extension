@@ -94,6 +94,17 @@ export class MDEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             webviewPanel.webview.postMessage({ command: 'saveResult', ok: false, error: String(err) });
                         }
                         break;
+
+                    case 'openExternal':
+                        try {
+                            const url = typeof message.url === 'string' ? message.url : '';
+                            if (url) {
+                                await vscode.env.openExternal(vscode.Uri.parse(url));
+                            }
+                        } catch {
+                            // ignore
+                        }
+                        break;
                 }
             });
 

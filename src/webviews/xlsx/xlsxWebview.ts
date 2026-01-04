@@ -1823,6 +1823,18 @@ import { InfoTooltip } from '../shared/infoTooltip';
                 icon: Icons.ThemeLight + Icons.ThemeDark + Icons.ThemeVSCode,
                 tooltip: 'Toggle Theme',
                 onClick: () => {}
+            },
+            {
+                id: 'helpButton',
+                icon: Icons.Help,
+                tooltip: 'Help & Feedback',
+                cls: 'icon-only',
+                onClick: () => {
+                    vscode.postMessage({
+                        command: 'openExternal',
+                        url: 'https://docs.google.com/forms/d/e/1FAIpQLSe5AqE_f1-WqUlQmvuPn1as3Mkn4oLjA0EDhNssetzt63ONzA/viewform'
+                    });
+                }
             }
         ]);
 

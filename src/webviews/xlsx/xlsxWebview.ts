@@ -61,6 +61,7 @@ import { InfoTooltip } from '../shared/infoTooltip';
     const AUTO_SCROLL_STEP = 20; // px per frame
 
     let handlersAttached = false;
+    let toolbarManager: ToolbarManager | null = null;
 
     // Settings (persisted by extension)
     interface Settings {
@@ -68,13 +69,15 @@ import { InfoTooltip } from '../shared/infoTooltip';
         stickyToolbar: boolean;
         stickyHeader: boolean;
         hyperlinkPreview: boolean;
+        isDefaultEditor?: boolean;
     }
 
     let currentSettings: Settings = {
         firstRowIsHeader: false,
         stickyToolbar: true,
         stickyHeader: false,
-        hyperlinkPreview: true
+        hyperlinkPreview: true,
+        isDefaultEditor: true
     };
 
     // Table edit mode (text-only)
@@ -1503,8 +1506,14 @@ import { InfoTooltip } from '../shared/infoTooltip';
             firstRowIsHeader: settings && typeof settings.firstRowIsHeader === 'boolean' ? settings.firstRowIsHeader : currentSettings.firstRowIsHeader,
             stickyToolbar: settings && typeof settings.stickyToolbar === 'boolean' ? settings.stickyToolbar : currentSettings.stickyToolbar,
             stickyHeader: settings && typeof settings.stickyHeader === 'boolean' ? settings.stickyHeader : currentSettings.stickyHeader,
-            hyperlinkPreview: settings && typeof settings.hyperlinkPreview === 'boolean' ? settings.hyperlinkPreview : currentSettings.hyperlinkPreview
+            hyperlinkPreview: settings && typeof settings.hyperlinkPreview === 'boolean' ? settings.hyperlinkPreview : currentSettings.hyperlinkPreview,
+            isDefaultEditor: settings && typeof settings.isDefaultEditor === 'boolean' ? settings.isDefaultEditor : currentSettings.isDefaultEditor
         };
+
+        // Show/hide enable button based on whether this is the default editor
+        if (toolbarManager) {
+            toolbarManager.setButtonVisibility('enableAsDefaultButton', currentSettings.isDefaultEditor === false);
+        }
 
         // Update settings panel UI
         const chkHeader = document.getElementById('chkHeaderRow') as HTMLInputElement;
@@ -1723,7 +1732,8 @@ import { InfoTooltip } from '../shared/infoTooltip';
         if (handlersAttached) return;
         handlersAttached = true;
 
-        const toolbar = new ToolbarManager('toolbar');
+        toolbarManager = new ToolbarManager('toolbar');
+        const toolbar = toolbarManager;
 
         // Sheet Selector
         const sheetSelector = document.createElement('select');
@@ -1835,6 +1845,16 @@ import { InfoTooltip } from '../shared/infoTooltip';
                         url: 'https://docs.google.com/forms/d/e/1FAIpQLSe5AqE_f1-WqUlQmvuPn1as3Mkn4oLjA0EDhNssetzt63ONzA/viewform'
                     });
                 }
+            },
+            {
+                id: 'enableAsDefaultButton',
+                icon: Icons.Zap,
+                label: 'Set as Default',
+                tooltip: 'Make XLSX Viewer the default editor for XLSX files',
+                hidden: true,
+                onClick: () => {
+                    vscode.postMessage({ command: 'enableAsDefault' });
+                }
             }
         ]);
 
@@ -1916,6 +1936,9 @@ import { InfoTooltip } from '../shared/infoTooltip';
 
             populateSheetSelector();
             attachHandlersOnce();
+            if (currentSettings) {
+                applySettings(currentSettings);
+            }
             const expandBtn = document.getElementById('toggleExpandButton');
             if (expandBtn) expandBtn.setAttribute('data-state', 'default');
             setExpandedMode(false);

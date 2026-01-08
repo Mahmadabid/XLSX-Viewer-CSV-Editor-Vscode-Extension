@@ -34,13 +34,15 @@ let isSaving = false;
 let shouldExitEditMode = false;
 let originalContent = '';
 let currentContent = '';
+let toolbarManager: ToolbarManager | null = null;
 
 // Settings
 let currentSettings = {
     stickyToolbar: true,
     wordWrap: true,
     syncScroll: true,
-    previewPosition: 'right'
+    previewPosition: 'right',
+    isMdEnabled: true
 };
 
 // ===== Utilities =====
@@ -48,7 +50,7 @@ const $ = Utils.$;
 
 function setButtonsEnabled(enabled: boolean) {
     const ids = ['toggleViewButton', 'toggleEditModeButton', 'saveEditsButton',
-        'cancelEditsButton', 'toggleBackgroundButton', 'openSettingsButton'];
+        'cancelEditsButton', 'toggleBackgroundButton', 'openSettingsButton', 'disableMdEditorButton'];
     ids.forEach((id) => {
         const el = $(id) as HTMLButtonElement;
         if (el) el.disabled = !enabled;
@@ -384,11 +386,18 @@ function applySettings(settings: any, persist = false) {
     const chkStickyToolbar = $('chkStickyToolbar') as HTMLInputElement;
     const chkSyncScroll = $('chkSyncScroll') as HTMLInputElement;
     const chkPreviewLeft = $('chkPreviewLeft') as HTMLInputElement;
+    const chkMdEnabled = $('chkMdEnabled') as HTMLInputElement;
 
     if (chkWordWrap) chkWordWrap.checked = currentSettings.wordWrap;
     if (chkStickyToolbar) chkStickyToolbar.checked = currentSettings.stickyToolbar;
     if (chkSyncScroll) chkSyncScroll.checked = currentSettings.syncScroll;
     if (chkPreviewLeft) chkPreviewLeft.checked = currentSettings.previewPosition === 'left';
+    if (chkMdEnabled) chkMdEnabled.checked = currentSettings.isMdEnabled;
+
+    if (toolbarManager) {
+        toolbarManager.setButtonVisibility('disableMdEditorButton', !!currentSettings.isMdEnabled);
+        toolbarManager.setButtonVisibility('enableMdEditorButton', !currentSettings.isMdEnabled);
+    }
 
     if (persist) {
         vscode.postMessage({ command: 'updateSettings', settings: currentSettings });
@@ -431,6 +440,15 @@ function initializeSettings() {
             onChange: (val: boolean) => {
                 currentSettings.previewPosition = val ? 'left' : 'right';
                 applySettings(currentSettings, true);
+            }
+        },
+        {
+            id: 'chkMdEnabled',
+            label: 'Enable XLSX Viewer for .md files',
+            defaultValue: currentSettings.isMdEnabled,
+            onChange: (val: boolean) => {
+                currentSettings.isMdEnabled = val;
+                vscode.postMessage({ command: 'toggleMdAssociation', enable: val });
             }
         }
     ];
@@ -491,9 +509,9 @@ window.addEventListener('message', (event) => {
 
 // ===== Button Handlers =====
 function wireButtons() {
-    const toolbar = new ToolbarManager('toolbar');
+    toolbarManager = new ToolbarManager('toolbar');
 
-    toolbar.setButtons([
+    toolbarManager.setButtons([
         {
             id: 'toggleViewButton',
             icon: Icons.EditFile,
@@ -551,6 +569,27 @@ function wireButtons() {
                     command: 'openExternal',
                     url: 'https://docs.google.com/forms/d/e/1FAIpQLSe5AqE_f1-WqUlQmvuPn1as3Mkn4oLjA0EDhNssetzt63ONzA/viewform'
                 });
+            }
+        },
+        {
+            id: 'disableMdEditorButton',
+            icon: Icons.ZapOff,
+            label: 'Disable MD',
+            tooltip: 'Disable XLSX Viewer for all Markdown files',
+            cls: 'edit-mode-hide',
+            onClick: () => {
+                vscode.postMessage({ command: 'disableMdEditor' });
+            }
+        },
+        {
+            id: 'enableMdEditorButton',
+            icon: Icons.Zap,
+            label: 'Enable MD',
+            tooltip: 'Enable XLSX Viewer for all Markdown files (Make Default)',
+            cls: 'edit-mode-hide',
+            hidden: true,
+            onClick: () => {
+                vscode.postMessage({ command: 'enableMdEditor' });
             }
         }
     ]);
@@ -701,4 +740,10 @@ initializeSettings();
 wireEditor();
 wireHoverTooltip();
 updateHeaderHeight();
+
+// Ensure settings are applied once toolbar is ready
+if (currentSettings) {
+    applySettings(currentSettings);
+}
+
 vscode.postMessage({ command: 'webviewReady' });

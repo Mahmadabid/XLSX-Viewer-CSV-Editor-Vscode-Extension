@@ -45,13 +45,27 @@ export class MDEditorProvider implements vscode.CustomReadonlyEditorProvider {
                                 fileName: vscode.workspace.asRelativePath(document.uri)
                             });
 
+                            // Calculate if MD is enabled as default
+                            const globalCfg = vscode.workspace.getConfiguration('workbench');
+                            const associations: any = globalCfg.get('editorAssociations');
+                            let isMdEnabled = false;
+                            
+                            if (associations) {
+                                if (Array.isArray(associations)) {
+                                    isMdEnabled = associations.some(a => a.viewType === 'xlsxViewer.md' && (a.filenamePattern === '*.md' || a.filenamePattern === '**/*.md'));
+                                } else {
+                                    isMdEnabled = associations["*.md"] === 'xlsxViewer.md' || associations["**/*.md"] === 'xlsxViewer.md';
+                                }
+                            }
+
                             // Send settings
                             const cfg = vscode.workspace.getConfiguration('xlsxViewer');
                             const settings = {
                                 stickyToolbar: cfg.get('md.stickyToolbar', true),
                                 wordWrap: cfg.get('md.wordWrap', true),
                                 syncScroll: cfg.get('md.syncScroll', true),
-                                previewPosition: cfg.get('md.previewPosition', 'right')
+                                previewPosition: cfg.get('md.previewPosition', 'right'),
+                                isMdEnabled: isMdEnabled
                             };
                             webviewPanel.webview.postMessage({ command: 'initSettings', settings });
 
@@ -105,18 +119,76 @@ export class MDEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             // ignore
                         }
                         break;
+
+                    case 'disableMdEditor':
+                        try {
+                            const result = await vscode.window.showWarningMessage(
+                                "Are you sure you want to disable XLSX Viewer for all Markdown files? You will be prompted to select a new default editor.",
+                                "Yes, Disable",
+                                "Cancel"
+                            );
+
+                            if (result === "Yes, Disable") {
+                                // 1. First remove our association so it's not the default anymore
+                                await vscode.commands.executeCommand('xlsx-viewer.toggleMdAssociation', false);
+                                
+                                // 2. Trigger the "Reopen With..." picker which allows selecting a new default
+                                // We use this command as it is more widely available than changeDefaultViewType
+                                await vscode.commands.executeCommand('workbench.action.reopenWithEditor');
+                            }
+                        } catch (err) {
+                            vscode.window.showErrorMessage(`Error disabling MD editor: ${err}`);
+                        }
+                        break;
+                    
+                    case 'enableMdEditor':
+                        try {
+                            await vscode.commands.executeCommand('xlsx-viewer.toggleMdAssociation', true);
+                            
+                             // Send updated settings
+                             const cfg = vscode.workspace.getConfiguration('xlsxViewer');
+                             const settings = {
+                                 stickyToolbar: cfg.get('md.stickyToolbar', true),
+                                 wordWrap: cfg.get('md.wordWrap', true),
+                                 syncScroll: cfg.get('md.syncScroll', true),
+                                 previewPosition: cfg.get('md.previewPosition', 'right'),
+                                 isMdEnabled: true
+                             };
+                             webviewPanel.webview.postMessage({ command: 'initSettings', settings });
+
+                        } catch (err) {
+                            vscode.window.showErrorMessage(`Error enabling MD editor: ${err}`);
+                        }
+                        break;
+                    
+                    case 'toggleMdAssociation':
+                        await vscode.commands.executeCommand('xlsx-viewer.toggleMdAssociation', !!message.enable);
+                        break;
                 }
             });
 
             // Forward settings changes
             const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
-                if (e.affectsConfiguration('xlsxViewer.md') || e.affectsConfiguration('xlsxViewer')) {
+                if (e.affectsConfiguration('xlsxViewer.md') || e.affectsConfiguration('xlsxViewer') || e.affectsConfiguration('workbench.editorAssociations')) {
                     const cfg = vscode.workspace.getConfiguration('xlsxViewer');
+                    const globalCfg = vscode.workspace.getConfiguration('workbench');
+                    const associations: any = globalCfg.get('editorAssociations');
+                    let isMdEnabled = false;
+                    
+                    if (associations) {
+                        if (Array.isArray(associations)) {
+                            isMdEnabled = associations.some(a => a.viewType === 'xlsxViewer.md' && (a.filenamePattern === '*.md' || a.filenamePattern === '**/*.md'));
+                        } else {
+                            isMdEnabled = associations["*.md"] === 'xlsxViewer.md' || associations["**/*.md"] === 'xlsxViewer.md';
+                        }
+                    }
+
                     const settings = {
                         stickyToolbar: cfg.get('md.stickyToolbar', true),
                         wordWrap: cfg.get('md.wordWrap', true),
                         syncScroll: cfg.get('md.syncScroll', true),
-                        previewPosition: cfg.get('md.previewPosition', 'right')
+                        previewPosition: cfg.get('md.previewPosition', 'right'),
+                        isMdEnabled: isMdEnabled
                     };
                     try {
                         webviewPanel.webview.postMessage({ command: 'settingsUpdated', settings });

@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.6.7 - Editor Association Management (2026-01-08)
+- **Markdown Editor Controls**: Added a toolbar **Disable MD** button in the Markdown viewer that lets users disable the extension for `.md` files. The button prompts for confirmation, removes the association, and triggers VS Code's **"Reopen With..."** picker to select a new default editor.
+- **Enable Button for Markdown**: When viewing a Markdown file via "Open With..." while it is not the default editor, an **Enable MD** button appears in the toolbar to quickly set XLSX Viewer as the default for `.md` files.
+- **Set as Default for All File Types**: Added a **"Set as Default"** button (lightning bolt icon) to CSV, TSV, and XLSX viewers. This button only appears when this extension is NOT currently the default editor for that file type, allowing you to quickly make XLSX Viewer the default.
+- **XLSX Viewer Shortcut**: Added an "Open in XLSX Viewer" button in the editor title bar for `.xlsx` files, allowing you to quickly switch to this extension's viewer when the file is opened in another editor.
+- **UI**: Added new `Zap` and `ZapOff` icons for managing editor associations.
+
 ## v1.6.6 - Help & Feedback
 - **Help Button**: Added a help button to the toolbar in all webviews (XLSX, CSV, TSV, Markdown) to easily access documentation and provide feedback.
 

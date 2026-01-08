@@ -38,11 +38,27 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
         const getPersistedSettings = () => {
             const cfg = vscode.workspace.getConfiguration('xlsxViewer');
+            const globalCfg = vscode.workspace.getConfiguration('workbench');
+            const associations: any = globalCfg.get('editorAssociations');
+            let isDefault = false;
+            
+            if (associations) {
+                if (Array.isArray(associations)) {
+                    isDefault = associations.some(a => 
+                        a.viewType === 'xlsxViewer.xlsx' && 
+                        (a.filenamePattern === '*.xlsx' || a.filenamePattern === '**/*.xlsx')
+                    );
+                } else {
+                    isDefault = associations["*.xlsx"] === 'xlsxViewer.xlsx' || associations["**/*.xlsx"] === 'xlsxViewer.xlsx';
+                }
+            }
+
             return {
                 firstRowIsHeader: cfg.get('xlsx.firstRowIsHeader', false),
                 stickyToolbar: cfg.get('xlsx.stickyToolbar', true),
                 stickyHeader: cfg.get('xlsx.stickyHeader', false),
-                hyperlinkPreview: cfg.get('xlsx.hyperlinkPreview', true)
+                hyperlinkPreview: cfg.get('xlsx.hyperlinkPreview', true),
+                isDefaultEditor: isDefault
             };
         };
 
@@ -129,6 +145,30 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
                     await cfg.update('xlsx.hyperlinkPreview', !!s.hyperlinkPreview, vscode.ConfigurationTarget.Global);
                 } catch (err) {
                     console.error('Failed to persist XLSX settings:', err);
+                }
+                return;
+            }
+
+            if (message?.command === 'enableDefaultEditor' || message?.command === 'enableAsDefault') {
+                await vscode.commands.executeCommand('xlsx-viewer.toggleAssociation', { type: 'xlsx', enable: true });
+                trySendSettings();
+                return;
+            }
+
+            if (message?.command === 'disableDefaultEditor') {
+                try {
+                    const result = await vscode.window.showWarningMessage(
+                        "Are you sure you want to disable XLSX Viewer for all .xlsx files? You will be prompted to select a new default editor.",
+                        "Yes, Disable",
+                        "Cancel"
+                    );
+
+                    if (result === "Yes, Disable") {
+                        await vscode.commands.executeCommand('xlsx-viewer.toggleAssociation', { type: 'xlsx', enable: false });
+                        await vscode.commands.executeCommand('workbench.action.reopenWithEditor');
+                    }
+                } catch (err) {
+                    vscode.window.showErrorMessage(`Error disabling editor: ${err}`);
                 }
                 return;
             }
@@ -233,7 +273,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
         // Forward settings changes made outside the webview
         const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('xlsxViewer.xlsx') || e.affectsConfiguration('xlsxViewer')) {
+            if (e.affectsConfiguration('xlsxViewer.xlsx') || e.affectsConfiguration('xlsxViewer') || e.affectsConfiguration('workbench.editorAssociations')) {
                 try {
                     webview.postMessage({ command: 'settingsUpdated', settings: getPersistedSettings() });
                 } catch {
@@ -773,7 +813,7 @@ export class XLSXEditorProvider implements vscode.CustomReadonlyEditorProvider {
             vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'table', 'view.png')
         );
         const svgUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'table', 'table.svg')
+            vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'xlsx', 'table.svg')
         );
         const cspSource = webview.cspSource;
 

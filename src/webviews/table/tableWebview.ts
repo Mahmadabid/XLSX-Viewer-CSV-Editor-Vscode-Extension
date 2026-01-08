@@ -54,16 +54,21 @@ import { InfoTooltip } from '../shared/infoTooltip';
         firstRowIsHeader: boolean;
         stickyToolbar: boolean;
         stickyHeader: boolean;
+        isDefaultEditor?: boolean;
     }
 
     let currentSettings: Settings = {
         firstRowIsHeader: false,
         stickyToolbar: true,
-        stickyHeader: false
+        stickyHeader: false,
+        isDefaultEditor: true
     };
 
     // Current file format: 'csv' or 'tsv'
     let fileFormat = 'csv';
+
+    // Toolbar manager (global for settings access)
+    let toolbarManager: ToolbarManager | null = null;
 
     // ===== Utilities =====
     const $ = Utils.$;
@@ -890,6 +895,11 @@ import { InfoTooltip } from '../shared/infoTooltip';
         if (chkSticky) chkSticky.checked = !!settings.stickyHeader;
         if (chkToolbar) chkToolbar.checked = !!settings.stickyToolbar;
 
+        // Show/hide enable button based on whether this is the default editor
+        if (toolbarManager) {
+            toolbarManager.setButtonVisibility('enableAsDefaultButton', settings.isDefaultEditor === false);
+        }
+
         // Bold first row when firstRowIsHeader is enabled
         const table = $('csv-table');
         if (table) {
@@ -1274,9 +1284,9 @@ import { InfoTooltip } from '../shared/infoTooltip';
     // ===== Button Handlers =====
 
     function wireButtons() {
-        const toolbar = new ToolbarManager('toolbar');
+        toolbarManager = new ToolbarManager('toolbar');
         
-        toolbar.setButtons([
+        toolbarManager.setButtons([
             {
                 id: 'toggleViewButton',
                 icon: Icons.EditFile,
@@ -1359,6 +1369,17 @@ import { InfoTooltip } from '../shared/infoTooltip';
                         command: 'openExternal',
                         url: 'https://docs.google.com/forms/d/e/1FAIpQLSe5AqE_f1-WqUlQmvuPn1as3Mkn4oLjA0EDhNssetzt63ONzA/viewform'
                     });
+                }
+            },
+            {
+                id: 'enableAsDefaultButton',
+                icon: Icons.Zap,
+                label: 'Set as Default',
+                tooltip: `Make XLSX Viewer the default editor for ${fileFormat.toUpperCase()} files`,
+                cls: 'edit-mode-hide',
+                hidden: true,
+                onClick: () => {
+                    vscode.postMessage({ command: 'enableAsDefault' });
                 }
             }
         ]);

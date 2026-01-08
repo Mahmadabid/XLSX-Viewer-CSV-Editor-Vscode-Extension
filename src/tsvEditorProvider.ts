@@ -161,10 +161,27 @@ export class TSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
                             // Send settings
                             const cfg = vscode.workspace.getConfiguration('xlsxViewer');
+                            const globalCfg = vscode.workspace.getConfiguration('workbench');
+                            const associations: any = globalCfg.get('editorAssociations');
+                            
+                            let isDefault = false;
+                            
+                            if (associations) {
+                                if (Array.isArray(associations)) {
+                                    isDefault = associations.some(a => 
+                                        a.viewType === 'xlsxViewer.tsv' && 
+                                        (a.filenamePattern === '*.tsv' || a.filenamePattern === '**/*.tsv')
+                                    );
+                                } else {
+                                    isDefault = associations["*.tsv"] === 'xlsxViewer.tsv' || associations["**/*.tsv"] === 'xlsxViewer.tsv';
+                                }
+                            }
+
                             const settings = {
                                 firstRowIsHeader: cfg.get('tsv.firstRowIsHeader', false),
                                 stickyHeader: cfg.get('tsv.stickyHeader', false),
-                                stickyToolbar: cfg.get('tsv.stickyToolbar', true)
+                                stickyToolbar: cfg.get('tsv.stickyToolbar', true),
+                                isDefaultEditor: isDefault
                             };
                             webviewPanel.webview.postMessage({ command: 'initSettings', settings });
 
@@ -215,6 +232,38 @@ export class TSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                         }
                         break;
 
+                    case 'enableDefaultEditor':
+                        await vscode.commands.executeCommand('xlsx-viewer.toggleAssociation', { type: 'tsv', enable: true });
+                        // Re-send settings to update UI
+                        const cfg_e = vscode.workspace.getConfiguration('xlsxViewer');
+                        webviewPanel.webview.postMessage({ 
+                            command: 'initSettings', 
+                            settings: {
+                                firstRowIsHeader: cfg_e.get('tsv.firstRowIsHeader', false),
+                                stickyHeader: cfg_e.get('tsv.stickyHeader', false),
+                                stickyToolbar: cfg_e.get('tsv.stickyToolbar', true),
+                                isDefaultEditor: true
+                            }
+                        });
+                        break;
+
+                    case 'disableDefaultEditor':
+                        try {
+                            const result = await vscode.window.showWarningMessage(
+                                "Are you sure you want to disable XLSX Viewer for all .tsv files? You will be prompted to select a new default editor.",
+                                "Yes, Disable",
+                                "Cancel"
+                            );
+
+                            if (result === "Yes, Disable") {
+                                await vscode.commands.executeCommand('xlsx-viewer.toggleAssociation', { type: 'tsv', enable: false });
+                                await vscode.commands.executeCommand('workbench.action.reopenWithEditor');
+                            }
+                        } catch (err) {
+                            vscode.window.showErrorMessage(`Error disabling editor: ${err}`);
+                        }
+                        break;
+
                     case 'toggleView':
                         if (!message.isTableView) {
                             await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default');
@@ -257,17 +306,41 @@ export class TSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             // ignore
                         }
                         break;
+
+                    case 'enableAsDefault':
+                        try {
+                            await vscode.commands.executeCommand('xlsx-viewer.toggleAssociation', { type: 'tsv', enable: true });
+                        } catch (err) {
+                            vscode.window.showErrorMessage(`Error setting default editor: ${err}`);
+                        }
+                        break;
                 }
             });
 
             // Forward settings changes
             const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
-                if (e.affectsConfiguration('xlsxViewer.tsv') || e.affectsConfiguration('xlsxViewer')) {
+                if (e.affectsConfiguration('xlsxViewer.tsv') || e.affectsConfiguration('xlsxViewer') || e.affectsConfiguration('workbench.editorAssociations')) {
                     const cfg = vscode.workspace.getConfiguration('xlsxViewer');
+                    const globalCfg = vscode.workspace.getConfiguration('workbench');
+                    const associations: any = globalCfg.get('editorAssociations');
+                    let isDefault = false;
+                    
+                    if (associations) {
+                        if (Array.isArray(associations)) {
+                            isDefault = associations.some(a => 
+                                a.viewType === 'xlsxViewer.tsv' && 
+                                (a.filenamePattern === '*.tsv' || a.filenamePattern === '**/*.tsv')
+                            );
+                        } else {
+                            isDefault = associations["*.tsv"] === 'xlsxViewer.tsv' || associations["**/*.tsv"] === 'xlsxViewer.tsv';
+                        }
+                    }
+
                     const settings = {
                         firstRowIsHeader: cfg.get('tsv.firstRowIsHeader', false),
                         stickyHeader: cfg.get('tsv.stickyHeader', false),
-                        stickyToolbar: cfg.get('tsv.stickyToolbar', true)
+                        stickyToolbar: cfg.get('tsv.stickyToolbar', true),
+                        isDefaultEditor: isDefault
                     };
                     try { 
                         webviewPanel.webview.postMessage({ command: 'settingsUpdated', settings }); 

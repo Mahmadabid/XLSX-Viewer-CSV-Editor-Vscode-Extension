@@ -161,10 +161,26 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
                             // Send settings
                             const cfg = vscode.workspace.getConfiguration('xlsxViewer');
+                            const globalCfg = vscode.workspace.getConfiguration('workbench');
+                            const associations: any = globalCfg.get('editorAssociations');
+                            let isDefault = false;
+                            
+                            if (associations) {
+                                if (Array.isArray(associations)) {
+                                    isDefault = associations.some(a => 
+                                        a.viewType === 'xlsxViewer.csv' && 
+                                        (a.filenamePattern === '*.csv' || a.filenamePattern === '**/*.csv')
+                                    );
+                                } else {
+                                    isDefault = associations["*.csv"] === 'xlsxViewer.csv' || associations["**/*.csv"] === 'xlsxViewer.csv';
+                                }
+                            }
+
                             const settings = {
                                 firstRowIsHeader: cfg.get('csv.firstRowIsHeader', false),
                                 stickyHeader: cfg.get('csv.stickyHeader', false),
-                                stickyToolbar: cfg.get('csv.stickyToolbar', true)
+                                stickyToolbar: cfg.get('csv.stickyToolbar', true),
+                                isDefaultEditor: isDefault
                             };
                             webviewPanel.webview.postMessage({ command: 'initSettings', settings });
 
@@ -215,6 +231,39 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                         }
                         break;
 
+                    case 'enableDefaultEditor':
+                    case 'enableAsDefault':
+                        await vscode.commands.executeCommand('xlsx-viewer.toggleAssociation', { type: 'csv', enable: true });
+                        // Re-send settings to update UI
+                        const cfg_e = vscode.workspace.getConfiguration('xlsxViewer');
+                        webviewPanel.webview.postMessage({ 
+                            command: 'initSettings', 
+                            settings: {
+                                firstRowIsHeader: cfg_e.get('csv.firstRowIsHeader', false),
+                                stickyHeader: cfg_e.get('csv.stickyHeader', false),
+                                stickyToolbar: cfg_e.get('csv.stickyToolbar', true),
+                                isDefaultEditor: true
+                            }
+                        });
+                        break;
+
+                    case 'disableDefaultEditor':
+                        try {
+                            const result = await vscode.window.showWarningMessage(
+                                "Are you sure you want to disable XLSX Viewer for all .csv files? You will be prompted to select a new default editor.",
+                                "Yes, Disable",
+                                "Cancel"
+                            );
+
+                            if (result === "Yes, Disable") {
+                                await vscode.commands.executeCommand('xlsx-viewer.toggleAssociation', { type: 'csv', enable: false });
+                                await vscode.commands.executeCommand('workbench.action.reopenWithEditor');
+                            }
+                        } catch (err) {
+                            vscode.window.showErrorMessage(`Error disabling editor: ${err}`);
+                        }
+                        break;
+
                     case 'toggleView':
                         if (!message.isTableView) {
                             await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default');
@@ -257,17 +306,41 @@ export class CSVEditorProvider implements vscode.CustomReadonlyEditorProvider {
                             // ignore
                         }
                         break;
+
+                    case 'enableAsDefault':
+                        try {
+                            await vscode.commands.executeCommand('xlsx-viewer.toggleAssociation', { type: 'csv', enable: true });
+                        } catch (err) {
+                            vscode.window.showErrorMessage(`Error setting default editor: ${err}`);
+                        }
+                        break;
                 }
             });
 
             // Forward settings changes
             const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
-                if (e.affectsConfiguration('xlsxViewer.csv') || e.affectsConfiguration('xlsxViewer')) {
+                if (e.affectsConfiguration('xlsxViewer.csv') || e.affectsConfiguration('xlsxViewer') || e.affectsConfiguration('workbench.editorAssociations')) {
                     const cfg = vscode.workspace.getConfiguration('xlsxViewer');
+                    const globalCfg = vscode.workspace.getConfiguration('workbench');
+                    const associations: any = globalCfg.get('editorAssociations');
+                    let isDefault = false;
+                    
+                    if (associations) {
+                        if (Array.isArray(associations)) {
+                            isDefault = associations.some(a => 
+                                a.viewType === 'xlsxViewer.csv' && 
+                                (a.filenamePattern === '*.csv' || a.filenamePattern === '**/*.csv')
+                            );
+                        } else {
+                            isDefault = associations["*.csv"] === 'xlsxViewer.csv' || associations["**/*.csv"] === 'xlsxViewer.csv';
+                        }
+                    }
+
                     const settings = {
                         firstRowIsHeader: cfg.get('csv.firstRowIsHeader', false),
                         stickyHeader: cfg.get('csv.stickyHeader', false),
-                        stickyToolbar: cfg.get('csv.stickyToolbar', true)
+                        stickyToolbar: cfg.get('csv.stickyToolbar', true),
+                        isDefaultEditor: isDefault
                     };
                     try { 
                         webviewPanel.webview.postMessage({ command: 'settingsUpdated', settings }); 
